@@ -16,7 +16,7 @@ local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent
 
   filename <- file.path(d, glue("{pkgname}.{extension}"))
   archive_write_dir(filename, d)
-  defer(unlink(d), envir = envir)
+  defer(unlink(d, recursive = TRUE), envir = envir)
   filename
 }
 

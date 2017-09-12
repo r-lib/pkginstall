@@ -2,53 +2,46 @@
 # code available on all platforms
 # better error messaging
 # parallel installs
-# 
 
 #' @importFrom archive archive
 install_mac_binary <- function(filename) {
-  tarball <- archive(filename)
 
-  # TODO: maybe get this from files in the archive?
-  pkg <- gsub("[_.].*$", "", filename)
+}
+
+#' @importFrom archive archive archive_read archive_write_dir
+#' @importFrom desc desc
+#' @importFrom withr local_connection defer
+verify_mac_binary <- function(filename) {
+
+  tarball <- archive(filename)
+  # TODO: maybe get this from path of files in the archive?
+  pkg <- gsub("[_.].*$", "", basename(filename))
 
   binary_archive_files <- c(
     file.path(pkg, "Meta", "package.rds"),
     file.path(pkg, "DESCRIPTION")
   )
 
-  if (!all(binary_archive_files %in% tarball$path)) {
+  valid_binary_archive <- all(binary_archive_files %in% tarball$path)
+
+  if (!valid_binary_archive) {
     missing_files <- binary_archive_files[binary_archive_files %!in% tarball$path]
-    abort("
+    abort(type = "invalid_input", "
       {filename} is not a valid mac binary, it does not contain {missing_files*}.
       ")
   }
-
-}
-
-#' @importFrom glue single_quote evaluate collapse
-collapse_quote_transformer <- function(regex = "[*]$", ...) {
-  function(code, envir, data) {
-    if (grepl(regex, code)) {
-        code <- sub(regex, "", code)
-    }
-    res <- evaluate(code, envir, data)
-    collapse(single_quote(res), ...)
+  desc_path <- file.path(pkg, "DESCRIPTION")
+  desc_lines <- readLines(local_connection(archive_read(tarball, desc_path)))
+  if (length(desc_lines) == 0) {
+    abort(type = "invalid_input", "
+      {filename} is not a valid mac binary, {desc_path} is empty.
+      ")
   }
-}
+  desc <- desc(text = desc_lines)
 
-#' @importFrom rlang abort
-#' @importFrom glue glue
-abort <- function(msg, type = NULL, .envir = parent.frame()) {
-  rlang::abort(glue(msg, .envir = parent.frame(), .transformer = collapse_quote_transformer(sep = ", ", last = " and ")), type = type)
-}
-
-`%!in%` <- function(x, y) {
-  !x %in% y
-}
-
-#' @importFrom glue glue collapse
-regex_escape <- function(x) {
-  chars <- collapse(c("*", ".", "?", "^", "+", "$", "|", "(", ")", "[", "]", "{", "}", "\\"), "\\")
-  re <- glue("([{chars}])")
-  gsub(re, "\\\\\\1", x, perl = TRUE)
+  if (is.null(desc$Built)) {
+    abort(type = "invalid_input", "
+      {filename} is not a valid mac binary, no 'Built' entry in {desc_path}.
+      ")
+  }
 }

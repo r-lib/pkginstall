@@ -1,4 +1,4 @@
 library(testthat)
-library(install)
+library(pkginstall)
 
-test_check("install")
+test_check("pkginstall")

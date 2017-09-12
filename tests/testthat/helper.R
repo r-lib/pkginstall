@@ -24,7 +24,7 @@ local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent
 # when run directly on the R REPL) make it the package environment instead.
 parent_or_pkg_env <- function(env = parent.frame()) {
   if (identical(env, globalenv())) {
-    return(asNamespace("install"))
+    return(asNamespace("pkginstall"))
   }
   env
 }

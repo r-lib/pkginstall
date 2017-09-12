@@ -14,8 +14,28 @@ install_mac_binary <- function(filename) {
 verify_mac_binary <- function(filename) {
 
   tarball <- archive(filename)
-  # TODO: maybe get this from path of files in the archive?
-  pkg <- gsub("[_.].*$", "", basename(filename))
+
+  description_path <- grep("DESCRIPTION$", tarball$path, value = TRUE)
+
+  # If there is more than one DESCRIPTION in the tarball use the shortest one,
+  # which should always be the top level DESCRIPTION file.
+  # This may happen if there are test packages in the package tests for instance.
+  description_path <- head(description_path[order(nchar(description_path))], n = 1)
+
+  if (length(description_path) == 0) {
+    abort(type = "invalid_input", "
+      {filename} is not a valid mac binary, it does not contain a `DESCRIPTION` file.
+      ")
+  }
+
+  pkg <- dirname(description_path)
+
+  nested_directory <- dirname(pkg) != "."
+  if (nested_directory) {
+    abort(type = "invalid_input", "
+      {filename} is not a valid mac binary, the `DESCRIPTION` file is nested more than 1 level deep {description_path}.
+      ")
+  }
 
   binary_archive_files <- c(
     file.path(pkg, "Meta", "package.rds"),
@@ -39,9 +59,11 @@ verify_mac_binary <- function(filename) {
   }
   desc <- desc(text = desc_lines)
 
-  if (is.null(desc$Built)) {
+  if (is.na(desc$get("Built"))) {
     abort(type = "invalid_input", "
       {filename} is not a valid mac binary, no 'Built' entry in {desc_path}.
       ")
   }
+
+  TRUE
 }

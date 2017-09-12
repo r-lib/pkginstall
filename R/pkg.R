@@ -54,6 +54,7 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
 #' @importFrom archive archive archive_read archive_write_dir
 #' @importFrom desc desc
 #' @importFrom withr local_connection defer local_libpaths
+#' @importFrom utils head
 verify_binary <- function(filename) {
 
   tarball <- archive(filename)

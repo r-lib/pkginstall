@@ -19,4 +19,4 @@ Remotes:
     jimhester/archive,
     r-lib/withr,
     tidyverse/glue
-RoxygenNote: 6.0.1.9000
+RoxygenNote: 6.0.1

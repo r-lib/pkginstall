@@ -11,6 +11,7 @@
 #'   installing. It defaults to using `getOption("install.lock")` for
 #'   compatibility with `utils::install.packages()`.
 #' @importFrom archive archive archive_extract
+#' @export
 install_binary <- function(filename, lib = .libPaths()[[1L]],
                                lock = getOption("install.lock", TRUE)) {
 
@@ -51,10 +52,16 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
   installed_path
 }
 
+#' Verify a R binary archive is valid
+#'
+#' @inheritParams install_binary
+#' @return A [desc::desc()] object of the DESCRIPTION file from the binary
+#'   archive.
 #' @importFrom archive archive archive_read archive_write_dir
 #' @importFrom desc desc
 #' @importFrom withr local_connection defer local_libpaths
 #' @importFrom utils head
+#' @export
 verify_binary <- function(filename) {
 
   tarball <- archive(filename)

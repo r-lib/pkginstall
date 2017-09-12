@@ -11,7 +11,7 @@ install_mac_binary <- function(filename) {
 #' @importFrom archive archive archive_read archive_write_dir
 #' @importFrom desc desc
 #' @importFrom withr local_connection defer
-verify_mac_binary <- function(filename) {
+verify_binary <- function(filename) {
 
   tarball <- archive(filename)
 
@@ -24,7 +24,7 @@ verify_mac_binary <- function(filename) {
 
   if (length(description_path) == 0) {
     abort(type = "invalid_input", "
-      {filename} is not a valid mac binary, it does not contain a `DESCRIPTION` file.
+      {filename} is not a valid binary, it does not contain a `DESCRIPTION` file.
       ")
   }
 
@@ -33,7 +33,7 @@ verify_mac_binary <- function(filename) {
   nested_directory <- dirname(pkg) != "."
   if (nested_directory) {
     abort(type = "invalid_input", "
-      {filename} is not a valid mac binary, the `DESCRIPTION` file is nested more than 1 level deep {description_path}.
+      {filename} is not a valid binary, the `DESCRIPTION` file is nested more than 1 level deep {description_path}.
       ")
   }
 

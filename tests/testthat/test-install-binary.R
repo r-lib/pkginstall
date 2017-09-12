@@ -1,6 +1,5 @@
 context("install_binary")
 
-#' @importFrom archive archive_create
 test_that("verify_binary", {
   f1 <- local_binary_package("test1")
   expect_error(verify_binary(f1),
@@ -34,4 +33,32 @@ test_that("verify_binary", {
   f7 <- local_binary_package("test7", "DESCRIPTION" = c("Package: foo"), "Meta/package.rds" = character())
   expect_error(verify_binary(f7),
     "'.*test7[.]tgz' is not a valid binary, no 'Built' entry in 'test7/DESCRIPTION'")
+})
+
+test_that("install_binary", {
+  skip_on_os(c("windows", "linux", "solaris"))
+
+  libpath <- tempfile()
+  dir.create(libpath)
+  on.exit(unlink(libpath, recursive = TRUE))
+
+  expect_error_free(
+    install_binary("foo_0.0.0.9000.tgz", lib = libpath))
+
+  # Load the package (and make sure it is unloaded) after installing again.
+  library(foo, lib.loc = libpath)
+  expect_error_free(
+    install_binary("foo_0.0.0.9000.tgz", lib = libpath))
+  expect_false(is_loaded("foo"))
+
+
+  # Should error if there is already a lock
+  dir.create(file.path(libpath, "00LOCK-foo"))
+  expect_error(
+    install_binary("foo_0.0.0.9000.tgz", lib = libpath),
+    "Installing 'foo' failed, lock found at .*00LOCK-foo")
+
+  # But not if `lock = FALSE`
+  expect_error_free(
+    install_binary("foo_0.0.0.9000.tgz", lib = libpath, lock = FALSE))
 })

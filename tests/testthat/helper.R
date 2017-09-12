@@ -25,3 +25,7 @@ local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent
   }
   filename
 }
+
+expect_error_free <- function(...) {
+  expect_error(..., regexp = NA)
+}

@@ -10,21 +10,23 @@
 #' @param lock If any value but `FALSE`, use per-package locking when
 #'   installing. It defaults to using `getOption("install.lock")` for
 #'   compatibility with `utils::install.packages()`.
-#' @importFrom archive archive
+#' @importFrom archive archive archive_extract
 install_binary <- function(filename, lib = .libPaths()[[1L]],
                                lock = getOption("install.lock", TRUE)) {
 
   desc <- verify_binary(filename)
   pkg_name <- desc$get("Package")
 
-  # unload the package, so any DLLs will be unloaded
-  pkgload::unload(pkg_name)
+  if (is_loaded(pkg_name)) {
+    # unload the package, so any DLLs will be unloaded
+    pkgload::unload(pkg_name)
+  }
 
   use_lock <- !identical(lock, FALSE)
   if (use_lock) {
     lockdir <- file.path(lib, glue('00LOCK-{pkg_name}'))
   } else {
-    lockdir <- tempfile(dir = lib)
+    lockdir <- tempfile(tmpdir = lib)
   }
   # Need to check for existing lock _before_ adding the on.exit
   if (file.exists(lockdir)) {
@@ -41,15 +43,17 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
       abort("Failed to remove installed package at {installed_path}")
     }
   }
-  ret <- file.rename(lockdir, installed_path)
+  ret <- file.rename(file.path(lockdir, pkg_name), installed_path)
   if (!ret) {
     abort("Unable to move package from {lockdir} to {installed_path}")
   }
+
+  installed_path
 }
 
 #' @importFrom archive archive archive_read archive_write_dir
 #' @importFrom desc desc
-#' @importFrom withr local_connection defer
+#' @importFrom withr local_connection defer local_libpaths
 verify_binary <- function(filename) {
 
   tarball <- archive(filename)

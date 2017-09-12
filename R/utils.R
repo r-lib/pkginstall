@@ -22,9 +22,6 @@ abort <- function(msg, type = NULL, .envir = parent.frame()) {
   !x %in% y
 }
 
-#' @importFrom glue glue collapse
-regex_escape <- function(x) {
-  chars <- collapse(c("*", ".", "?", "^", "+", "$", "|", "(", ")", "[", "]", "{", "}", "\\"), "\\")
-  re <- glue("([{chars}])")
-  gsub(re, "\\\\\\1", x, perl = TRUE)
+is_loaded <- function(package) {
+  package %in% loadedNamespaces()
 }

@@ -7,8 +7,10 @@ License: GPL-3
 Imports:
     archive,
     depends,
+    desc,
     glue,
-    rlang
+    rlang,
+    withr
 Suggests:
     testthat
 ByteCompile: true

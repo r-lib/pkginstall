@@ -6,7 +6,6 @@ Description: What the package does (one paragraph).
 License: GPL-3
 Imports:
     archive,
-    depends,
     desc,
     glue,
     rlang,
@@ -16,7 +15,7 @@ Suggests:
 ByteCompile: true
 Encoding: UTF-8
 LazyData: true
-Remotes: r-lib/depends,
+Remotes:
     jimhester/archive,
     r-lib/withr,
     tidyverse/glue

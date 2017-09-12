@@ -1,4 +1,4 @@
-local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent_or_pkg_env()) {
+local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent.frame()) {
 
   # All arguments must be named
   args <- list(...)
@@ -16,15 +16,12 @@ local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent
 
   filename <- file.path(d, glue("{pkgname}.{extension}"))
   archive_write_dir(filename, d)
-  defer(unlink(d, recursive = TRUE), envir = envir)
-  filename
-}
 
-# For debugging if the parent frame is the global environment (as it would be
-# when run directly on the R REPL) make it the package environment instead.
-parent_or_pkg_env <- function(env = parent.frame()) {
-  if (identical(env, globalenv())) {
-    return(asNamespace("pkginstall"))
+  # We do not want to unlink files if we are calling this from the R console,
+  # useful when debugging.
+  is_globalenv <- identical(envir, globalenv())
+  if (!is_globalenv) {
+    defer(unlink(d, recursive = TRUE), envir = envir)
   }
-  env
+  filename
 }

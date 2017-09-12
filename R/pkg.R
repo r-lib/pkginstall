@@ -3,9 +3,48 @@
 # better error messaging
 # parallel installs
 
+#' Install a R binary package
+#'
+#' @param filename filename of built binary package to install
+#' @param lib library to install packages into
+#' @param lock If any value but `FALSE`, use per-package locking when
+#'   installing. It defaults to using `getOption("install.lock")` for
+#'   compatibility with `utils::install.packages()`.
 #' @importFrom archive archive
-install_mac_binary <- function(filename) {
+install_binary <- function(filename, lib = .libPaths()[[1L]],
+                               lock = getOption("install.lock", TRUE)) {
 
+  desc <- verify_binary(filename)
+  pkg_name <- desc$get("Package")
+
+  # unload the package, so any DLLs will be unloaded
+  pkgload::unload(pkg_name)
+
+  use_lock <- !identical(lock, FALSE)
+  if (use_lock) {
+    lockdir <- file.path(lib, glue('00LOCK-{pkg_name}'))
+  } else {
+    lockdir <- tempfile(dir = lib)
+  }
+  # Need to check for existing lock _before_ adding the on.exit
+  if (file.exists(lockdir)) {
+    abort("Installing {pkg_name} failed, lock found at {lockdir}")
+  }
+  on.exit(unlink(lockdir, recursive = TRUE))
+
+  archive_extract(filename, dir = lockdir)
+
+  installed_path <- file.path(lib, pkg_name)
+  if (file.exists(installed_path)) {
+    ret <- unlink(installed_path, recursive = TRUE, force = TRUE)
+    if (ret != 0L) {
+      abort("Failed to remove installed package at {installed_path}")
+    }
+  }
+  ret <- file.rename(lockdir, installed_path)
+  if (!ret) {
+    abort("Unable to move package from {lockdir} to {installed_path}")
+  }
 }
 
 #' @importFrom archive archive archive_read archive_write_dir
@@ -47,23 +86,23 @@ verify_binary <- function(filename) {
   if (!valid_binary_archive) {
     missing_files <- binary_archive_files[binary_archive_files %!in% tarball$path]
     abort(type = "invalid_input", "
-      {filename} is not a valid mac binary, it does not contain {missing_files*}.
+      {filename} is not a valid binary, it does not contain {missing_files*}.
       ")
   }
   desc_path <- file.path(pkg, "DESCRIPTION")
   desc_lines <- readLines(local_connection(archive_read(tarball, desc_path)))
   if (length(desc_lines) == 0) {
     abort(type = "invalid_input", "
-      {filename} is not a valid mac binary, {desc_path} is empty.
+      {filename} is not a valid binary, {desc_path} is empty.
       ")
   }
   desc <- desc(text = desc_lines)
 
   if (is.na(desc$get("Built"))) {
     abort(type = "invalid_input", "
-      {filename} is not a valid mac binary, no 'Built' entry in {desc_path}.
+      {filename} is not a valid binary, no 'Built' entry in {desc_path}.
       ")
   }
 
-  TRUE
+  desc
 }

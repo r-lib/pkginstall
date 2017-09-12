@@ -9,7 +9,8 @@ Imports:
     desc,
     glue,
     rlang,
-    withr
+    withr,
+    pkgload
 Suggests:
     testthat
 ByteCompile: true

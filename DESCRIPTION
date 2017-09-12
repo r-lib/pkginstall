@@ -1,21 +1,21 @@
 Package: install
-Version: 0.0.0.9000
 Title: What the Package Does (one line, title case)
-Description: What the package does (one paragraph).
+Version: 0.0.0.9000
 Authors@R: person("Jim", "Hester", email = "james.f.hester@gmail.com", role = c("aut", "cre"))
+Description: What the package does (one paragraph).
 License: GPL-3
+Imports:
+    archive,
+    depends,
+    glue,
+    rlang
+Suggests:
+    testthat
+ByteCompile: true
 Encoding: UTF-8
 LazyData: true
-ByteCompile: true
 Remotes: r-lib/depends,
     jimhester/archive,
     r-lib/withr,
     tidyverse/glue
-Imports: 
-    depends,
-    archive,
-    glue,
-    rlang
 RoxygenNote: 6.0.1.9000
-Suggests: 
-    testthat

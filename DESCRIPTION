@@ -20,6 +20,7 @@ ByteCompile: true
 Encoding: UTF-8
 LazyData: true
 Remotes:
+    r-lib/pkgload,
     jimhester/archive,
     r-lib/withr,
     tidyverse/glue

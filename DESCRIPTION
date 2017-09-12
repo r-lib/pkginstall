@@ -13,8 +13,9 @@ Imports:
     pkgload,
     rlang,
     withr
-Suggests:
-    testthat
+Suggests: 
+    testthat,
+    covr
 ByteCompile: true
 Encoding: UTF-8
 LazyData: true
@@ -23,3 +24,5 @@ Remotes:
     r-lib/withr,
     tidyverse/glue
 RoxygenNote: 6.0.1
+Depends: 
+    R (>= 3.1)

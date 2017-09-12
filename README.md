@@ -1,4 +1,6 @@
 # pkginstall
+[![Travis build status](https://travis-ci.org/r-lib/pkginstall.svg?branch=master)](https://travis-ci.org/r-lib/pkginstall)
+[![Coverage status](https://codecov.io/gh/r-lib/pkginstall/branch/master/graph/badge.svg)](https://codecov.io/github/r-lib/pkginstall?branch=master)
 
 Provides a replacement for `utils::install.packages(repo = NULL)` for binary
 packages. i.e. it extracts the compressed archives into the package library.

@@ -71,3 +71,21 @@ test_that("install_binary_windows", {
     install_binary("foo_0.0.0.9000.zip", lib = libpath))
   expect_false(is_loaded("foo"))
 })
+
+test_that("install_binary works for simultaneous installs", {
+  skip_on_cran()
+
+  libpath <- create_temp_dir()
+
+  processes <- list()
+  num <- 5
+  processes <- replicate(num, simplify = FALSE,
+    callr::r_bg(args = list(libpath),
+      function(libpath) pkginstall::install_binary("foo_0.0.0.9000.zip", lib = libpath))
+  )
+
+  for (i in seq_len(num)) {
+    processes[[i]]$wait(timeout = 3000L)
+    expect_identical(processes[[i]]$get_exit_status(), 0L)
+  }
+})

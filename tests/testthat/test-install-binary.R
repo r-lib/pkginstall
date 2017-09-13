@@ -39,8 +39,7 @@ test_that("install_binary_macos", {
   # even though this is a MacOS binary it still works on the
   # other OSs, as it is just R code.
 
-  libpath <- tempfile()
-  dir.create(libpath)
+  libpath <- create_temp_dir()
   on.exit({
     remove.packages("foo", lib = libpath)
     unlink(libpath, recursive = TRUE)
@@ -54,29 +53,14 @@ test_that("install_binary_macos", {
   expect_error_free(
     install_binary("foo_0.0.0.9000.tgz", lib = libpath))
   expect_false(is_loaded("foo"))
-
-
-  # Should error if there is already a lock
-  dir.create(file.path(libpath, "00LOCK-foo"))
-  expect_error(
-    install_binary("foo_0.0.0.9000.tgz", lib = libpath),
-    "Installing 'foo' failed, lock found at .*00LOCK-foo")
-
-  # But not if `lock = FALSE`
-  expect_error_free(
-    install_binary("foo_0.0.0.9000.tgz", lib = libpath, lock = FALSE))
 })
 
 test_that("install_binary_windows", {
   # even though this is a Windows binary it still works on the
   # other OSs, as it is just R code.
 
-  libpath <- tempfile()
-  dir.create(libpath)
-  on.exit({
-    remove.packages("foo", lib = libpath)
-    unlink(libpath, recursive = TRUE)
-  })
+  libpath <- create_temp_dir()
+  on.exit(unlink(libpath, recursive = TRUE))
 
   expect_error_free(
     install_binary("foo_0.0.0.9000.zip", lib = libpath))
@@ -86,14 +70,4 @@ test_that("install_binary_windows", {
   expect_error_free(
     install_binary("foo_0.0.0.9000.zip", lib = libpath))
   expect_false(is_loaded("foo"))
-
-  # Should error if there is already a lock
-  dir.create(file.path(libpath, "00LOCK-foo"))
-  expect_error(
-    install_binary("foo_0.0.0.9000.zip", lib = libpath),
-    "Installing 'foo' failed, lock found at .*00LOCK-foo")
-
-  # But not if `lock = FALSE`
-  expect_error_free(
-    install_binary("foo_0.0.0.9000.zip", lib = libpath, lock = FALSE))
 })

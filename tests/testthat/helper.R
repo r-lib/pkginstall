@@ -4,8 +4,7 @@ local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent
   args <- list(...)
   stopifnot(length(args) == 0 || rlang::is_named(args))
 
-  d <- tempfile()
-  dir.create(d)
+  d <- create_temp_dir()
   pkgdir <- file.path(d, pkgname)
   dir.create(pkgdir)
   nms <- names(args)

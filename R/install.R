@@ -11,6 +11,7 @@
 #'   installing. It defaults to using `getOption("install.lock")` for
 #'   compatibility with `utils::install.packages()`.
 #' @importFrom archive archive archive_extract
+#' @importFrom filelock lock unlock
 #' @export
 install_binary <- function(filename, lib = .libPaths()[[1L]],
                                lock = getOption("install.lock", TRUE)) {
@@ -23,30 +24,45 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
     pkgload::unload(pkg_name)
   }
 
+  lib_cache <- file.path(lib, "_cache")
+  dir.create(lib_cache, showWarnings = FALSE)
+
   use_lock <- !identical(lock, FALSE)
   if (use_lock) {
-    lockdir <- file.path(lib, glue('00LOCK-{pkg_name}'))
-  } else {
-    lockdir <- tempfile(tmpdir = lib)
+    lockfile <- file.path(lib_cache, glue("{pkg_name}.lock"))
+    # TODO: timeout and fail?
+    my_lock <- lock(lockfile)
+    on.exit(unlock(my_lock))
   }
-  # Need to check for existing lock _before_ adding the on.exit
-  if (file.exists(lockdir)) {
-    abort("Installing {pkg_name} failed, lock found at {lockdir}")
-  }
-  on.exit(unlink(lockdir, recursive = TRUE))
 
-  archive_extract(filename, dir = lockdir)
+  pkg_cache_dir <- file.path(lib_cache, pkg_name)
+  if (file.exists(pkg_cache_dir)) {
+    unlink(pkg_cache_dir, recursive = TRUE, force = TRUE)
+  }
+
+  archive_extract(filename, dir = lib_cache)
 
   installed_path <- file.path(lib, pkg_name)
   if (file.exists(installed_path)) {
-    ret <- unlink(installed_path, recursive = TRUE, force = TRUE)
-    if (ret != 0L) {
-      abort("Failed to remove installed package at {installed_path}")
+    # First move the existing library (which still works even if a process has
+    # the DLL open), then try to delete it, which may fail if another process
+    # has the file open.
+    move_to <- create_temp_dir()
+    ret <- file.rename(installed_path, move_to)
+    if (!ret) {
+      abort(type = "filesystem",
+        "Failed to move installed package at {installed_path}")
+    }
+    ret <- unlink(move_to, recursive = TRUE, force = TRUE)
+    if (ret != 0) {
+      warn(type = "filesystem",
+        "Failed to remove installed package at {move_to}")
     }
   }
-  ret <- file.rename(file.path(lockdir, pkg_name), installed_path)
+  ret <- file.rename(pkg_cache_dir, installed_path)
   if (!ret) {
-    abort("Unable to move package from {lockdir} to {installed_path}")
+    abort(type = "filesystem",
+      "Unable to move package from {extract_dir} to {installed_path}")
   }
 
   installed_path

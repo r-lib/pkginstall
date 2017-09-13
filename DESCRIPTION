@@ -6,24 +6,25 @@ Description: Provides a replacement for `utils::install.packages(repo = NULL)`
     for binary packages. i.e. it extracts the compressed archives into the package
     library.
 License: GPL-3
-Imports:
+Imports: 
     archive,
     desc,
     glue,
     pkgload,
     rlang,
-    withr
+    withr,
+    filelock
 Suggests: 
     testthat,
     covr
 ByteCompile: true
 Encoding: UTF-8
 LazyData: true
-Remotes:
-    r-lib/pkgload,
+Remotes: r-lib/pkgload,
     jimhester/archive,
     r-lib/withr,
-    tidyverse/glue
+    tidyverse/glue,
+    r-lib/filelock
 RoxygenNote: 6.0.1
 Depends: 
     R (>= 3.1)

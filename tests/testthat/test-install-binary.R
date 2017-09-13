@@ -35,12 +35,16 @@ test_that("verify_binary", {
     "'.*test7[.]tgz' is not a valid binary, no 'Built' entry in 'test7/DESCRIPTION'")
 })
 
-test_that("install_binary", {
-  skip_on_os(c("windows", "linux", "solaris"))
+test_that("install_binary_macos", {
+  # even though this is a MacOS binary it still works on the
+  # other OSs, as it is just R code.
 
   libpath <- tempfile()
   dir.create(libpath)
-  on.exit(unlink(libpath, recursive = TRUE))
+  on.exit({
+    remove.packages("foo", lib = libpath)
+    unlink(libpath, recursive = TRUE)
+  })
 
   expect_error_free(
     install_binary("foo_0.0.0.9000.tgz", lib = libpath))
@@ -61,4 +65,35 @@ test_that("install_binary", {
   # But not if `lock = FALSE`
   expect_error_free(
     install_binary("foo_0.0.0.9000.tgz", lib = libpath, lock = FALSE))
+})
+
+test_that("install_binary_windows", {
+  # even though this is a Windows binary it still works on the
+  # other OSs, as it is just R code.
+
+  libpath <- tempfile()
+  dir.create(libpath)
+  on.exit({
+    remove.packages("foo", lib = libpath)
+    unlink(libpath, recursive = TRUE)
+  })
+
+  expect_error_free(
+    install_binary("foo_0.0.0.9000.zip", lib = libpath))
+
+  # Load the package (and make sure it is unloaded) after installing again.
+  library(foo, lib.loc = libpath)
+  expect_error_free(
+    install_binary("foo_0.0.0.9000.zip", lib = libpath))
+  expect_false(is_loaded("foo"))
+
+  # Should error if there is already a lock
+  dir.create(file.path(libpath, "00LOCK-foo"))
+  expect_error(
+    install_binary("foo_0.0.0.9000.zip", lib = libpath),
+    "Installing 'foo' failed, lock found at .*00LOCK-foo")
+
+  # But not if `lock = FALSE`
+  expect_error_free(
+    install_binary("foo_0.0.0.9000.zip", lib = libpath, lock = FALSE))
 })

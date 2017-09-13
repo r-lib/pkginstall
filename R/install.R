@@ -20,8 +20,9 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
   pkg_name <- desc$get("Package")
 
   if (is_loaded(pkg_name)) {
-    # unload the package, so any DLLs will be unloaded
-    pkgload::unload(pkg_name)
+    abort(type = "runtime_error",
+     "Package {pkg_name} is already loaded and cannot be installed.
+      Use `pkgload::unload({pkg_name})` to unload it.")
   }
 
   lib_cache <- file.path(lib, "_cache")

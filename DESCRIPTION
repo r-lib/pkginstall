@@ -6,22 +6,21 @@ Description: Provides a replacement for `utils::install.packages(repo = NULL)`
     for binary packages. i.e. it extracts the compressed archives into the package
     library.
 License: GPL-3
-Imports: 
+Imports:
     archive,
     desc,
     glue,
-    pkgload,
     rlang,
     withr,
     filelock
-Suggests: 
+Suggests:
     testthat,
     covr,
     callr
 ByteCompile: true
 Encoding: UTF-8
 LazyData: true
-Remotes: r-lib/pkgload,
+Remotes:
     jimhester/archive,
     r-lib/withr,
     tidyverse/glue,

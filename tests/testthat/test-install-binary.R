@@ -48,11 +48,14 @@ test_that("install_binary_macos", {
   expect_error_free(
     install_binary("foo_0.0.0.9000.tgz", lib = libpath))
 
-  # Load the package (and make sure it is unloaded) after installing again.
+  # Installing a loaded package should be an error.
   library(foo, lib.loc = libpath)
-  expect_error_free(
-    install_binary("foo_0.0.0.9000.tgz", lib = libpath))
-  expect_false(is_loaded("foo"))
+
+  expect_error(
+    install_binary("foo_0.0.0.9000.tgz", lib = libpath),
+    "Package '.*' is already loaded and cannot be installed[.]")
+
+  detach("package:foo", unload = TRUE, character.only = TRUE)
 })
 
 test_that("install_binary_windows", {
@@ -60,16 +63,22 @@ test_that("install_binary_windows", {
   # other OSs, as it is just R code.
 
   libpath <- create_temp_dir()
-  on.exit(unlink(libpath, recursive = TRUE))
+  on.exit({
+    remove.packages("foo", lib = libpath)
+    unlink(libpath, recursive = TRUE)
+  })
 
   expect_error_free(
     install_binary("foo_0.0.0.9000.zip", lib = libpath))
 
-  # Load the package (and make sure it is unloaded) after installing again.
+  # Installing a loaded package should be an error.
   library(foo, lib.loc = libpath)
-  expect_error_free(
-    install_binary("foo_0.0.0.9000.zip", lib = libpath))
-  expect_false(is_loaded("foo"))
+
+  expect_error(
+    install_binary("foo_0.0.0.9000.zip", lib = libpath),
+    "Package '.*' is already loaded and cannot be installed[.]")
+
+  detach("package:foo", unload = TRUE, character.only = TRUE)
 })
 
 test_that("install_binary works for simultaneous installs", {

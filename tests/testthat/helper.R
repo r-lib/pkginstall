@@ -10,7 +10,9 @@ local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent
   nms <- names(args)
   for (i in seq_along(args)) {
     dir.create(file.path(pkgdir, dirname(nms[[i]])), showWarnings = FALSE, recursive = TRUE)
-    writeLines(args[[i]], file.path(pkgdir, nms[[i]]))
+    withr::with_connection(con = file(file.path(pkgdir, nms[[i]]), open = "wb"), {
+      writeLines(args[[i]], con, sep = "\n")
+    })
   }
 
   filename <- file.path(d, glue("{pkgname}.{extension}"))

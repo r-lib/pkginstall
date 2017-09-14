@@ -36,6 +36,7 @@ test_that("verify_binary", {
 })
 
 test_that("install_binary_macos", {
+  skip_on_os("windows")
   # even though this is a MacOS binary it still works on the
   # other OSs, as it is just R code.
 
@@ -50,6 +51,7 @@ test_that("install_binary_macos", {
 
   # Installing a loaded package should be an error.
   library(foo, lib.loc = libpath)
+  expect_equal(foo::foo(), NULL)
 
   expect_error(
     install_binary("foo_0.0.0.9000.tgz", lib = libpath),
@@ -73,6 +75,7 @@ test_that("install_binary_windows", {
 
   # Installing a loaded package should be an error.
   library(foo, lib.loc = libpath)
+  expect_equal(foo::foo(), NULL)
 
   expect_error(
     install_binary("foo_0.0.0.9000.zip", lib = libpath),
@@ -84,17 +87,32 @@ test_that("install_binary_windows", {
 test_that("install_binary works for simultaneous installs", {
   skip_on_cran()
 
+  switch (sysname(),
+          windows = { pkg <- "foo_0.0.0.9000.zip" },
+          linux = ,
+          mac = { pkg <- "foo_0.0.0.9000.tgz" },
+          skip(glue("Cannot test on {sysname()}"))
+          )
+
   libpath <- create_temp_dir()
 
   processes <- list()
   num <- 5
+
+  # install and load foo here to test loaded DLLs in another process
+  pkginstall::install_binary(pkg, lib = libpath)
+  library(foo)
+
+  expect_equal(foo::foo(), NULL)
   processes <- replicate(num, simplify = FALSE,
-    callr::r_bg(args = list(libpath),
-      function(libpath) pkginstall::install_binary("foo_0.0.0.9000.zip", lib = libpath))
+    callr::r_bg(args = list(pkg, libpath),
+      function(pkg, libpath) pkginstall::install_binary(pkg, lib = libpath))
   )
 
   for (i in seq_len(num)) {
     processes[[i]]$wait(timeout = 3000L)
     expect_identical(processes[[i]]$get_exit_status(), 0L)
+    expect_identical(processes[[i]]$read_all_output(), "")
+    expect_identical(processes[[i]]$read_all_error(), "")
   }
 })

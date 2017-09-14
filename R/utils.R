@@ -46,3 +46,10 @@ create_temp_dir <- function(...) {
   dir.create(f)
   f
 }
+
+sysname <- function() {
+  res <- tolower(Sys.info()[["sysname"]])
+  map <- c(darwin = "mac", "sunos" = "solaris")[res]
+  res[!is.na(map)] <- map
+  res
+}

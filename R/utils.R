@@ -1,12 +1,19 @@
 #' @importFrom glue single_quote evaluate collapse
-collapse_quote_transformer <- function(regex = "[*]$", ...) {
-  function(code, envir, data) {
-    if (grepl(regex, code)) {
-        code <- sub(regex, "", code)
-    }
-    res <- evaluate(code, envir, data)
-    collapse(single_quote(res), ...)
+collapse_quote_transformer <- function(code, envir, data) {
+  collapse_re <- "[*]$"
+  quote_re <- "^[|]"
+  should_collapse <- grepl(collapse_re, code)
+  should_quote <- !grepl(quote_re, code)
+  code <- sub(collapse_re, "",
+    sub(quote_re, "", code))
+  res <- evaluate(code, envir, data)
+  if (should_quote) {
+    res <- single_quote(res)
   }
+  if (should_collapse) {
+    res <- collapse(res, sep = ", ", last = " and ")
+  }
+  res
 }
 
 #' @importFrom rlang abort
@@ -14,7 +21,7 @@ collapse_quote_transformer <- function(regex = "[*]$", ...) {
 abort <- function(msg, type = NULL, .envir = parent.frame()) {
   rlang::abort(glue(msg,
       .envir = parent.frame(),
-      .transformer = collapse_quote_transformer(sep = ", ", last = " and ")),
+      .transformer = collapse_quote_transformer),
     type = type)
 }
 
@@ -22,7 +29,7 @@ abort <- function(msg, type = NULL, .envir = parent.frame()) {
 warn <- function(msg, type = NULL, .envir = parent.frame()) {
   rlang::warn(glue(msg,
       .envir = parent.frame(),
-      .transformer = collapse_quote_transformer(sep = ", ", last = " and ")),
+      .transformer = collapse_quote_transformer),
     type = type)
 }
 

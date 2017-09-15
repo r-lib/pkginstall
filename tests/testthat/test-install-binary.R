@@ -35,64 +35,40 @@ test_that("verify_binary", {
     "'.*test7[.]tgz' is not a valid binary, no 'Built' entry in 'test7/DESCRIPTION'")
 })
 
-test_that("install_binary_macos", {
-  skip_on_os("windows")
-  # even though this is a MacOS binary it still works on the
-  # other OSs, as it is just R code.
+test_that("install_binary", {
+
+  pkg <- binary_test_package("foo_0.0.0.9000")
 
   libpath <- create_temp_dir()
   on.exit({
+    detach("package:foo", character.only = TRUE, unload = TRUE)
     remove.packages("foo", lib = libpath)
     unlink(libpath, recursive = TRUE)
   })
 
   expect_error_free(
-    install_binary("foo_0.0.0.9000.tgz", lib = libpath))
-
-  # Installing a loaded package should be an error.
-  library(foo, lib.loc = libpath)
-  expect_equal(foo::foo(), NULL)
-
-  expect_error(
-    install_binary("foo_0.0.0.9000.tgz", lib = libpath),
-    "Package '.*' is already loaded and cannot be installed[.]")
-
-  detach("package:foo", unload = TRUE, character.only = TRUE)
-})
-
-test_that("install_binary_windows", {
-  # even though this is a Windows binary it still works on the
-  # other OSs, as it is just R code.
-
-  libpath <- create_temp_dir()
-  on.exit({
-    remove.packages("foo", lib = libpath)
-    unlink(libpath, recursive = TRUE)
-  })
-
+    install_binary(pkg, lib = libpath))
   expect_error_free(
-    install_binary("foo_0.0.0.9000.zip", lib = libpath))
+    library("foo", lib.loc = libpath))
 
   # Installing a loaded package should be an error.
-  library(foo, lib.loc = libpath)
+
   expect_equal(foo::foo(), NULL)
 
   expect_error(
-    install_binary("foo_0.0.0.9000.zip", lib = libpath),
+    install_binary(pkg, lib = libpath),
     "Package '.*' is already loaded and cannot be installed[.]")
-
-  detach("package:foo", unload = TRUE, character.only = TRUE)
 })
 
 test_that("install_binary works for simultaneous installs", {
   skip_on_cran()
 
-  switch (sysname(),
-          windows = { pkg <- "foo_0.0.0.9000.zip" },
-          linux = ,
-          mac = { pkg <- "foo_0.0.0.9000.tgz" },
-          skip(glue("Cannot test on {sysname()}"))
-          )
+  pkg <- binary_test_package("foo_0.0.0.9000")
+  on.exit({
+    detach("package:foo", character.only = TRUE, unload = TRUE)
+    remove.packages("foo", lib = libpath)
+    unlink(libpath, recursive = TRUE)
+  })
 
   libpath <- create_temp_dir()
 
@@ -100,8 +76,10 @@ test_that("install_binary works for simultaneous installs", {
   num <- 5
 
   # install and load foo here to test loaded DLLs in another process
-  pkginstall::install_binary(pkg, lib = libpath)
-  library(foo)
+  expect_error_free(
+    install_binary(pkg, lib = libpath))
+  expect_error_free(
+    library("foo", lib.loc = libpath))
 
   expect_equal(foo::foo(), NULL)
   processes <- replicate(num, simplify = FALSE,

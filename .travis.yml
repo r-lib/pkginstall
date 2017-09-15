@@ -10,16 +10,17 @@ addons:
       libarchive-dev
 
 r:
-- 3.1
-- 3.2
-- oldrel
-- release
-- devel
+  - 3.4.0
+#- 3.1
+#- 3.2
+#- oldrel
+#- release
+#- devel
 
-matrix:
-  include:
-    - os: osx
-      r: release
+#matrix:
+#  include:
+#    - os: osx
+#      r: release
 
 after_success:
   - Rscript -e 'covr::codecov()'

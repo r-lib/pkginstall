@@ -16,5 +16,10 @@ r:
 - release
 - devel
 
+matrix:
+  include:
+    - os: osx
+      r: release
+
 after_success:
   - Rscript -e 'covr::codecov()'

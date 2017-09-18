@@ -49,7 +49,7 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
   ret <- file.rename(pkg_cache_dir, installed_path)
   if (!ret) {
     abort(type = "filesystem",
-      "Unable to move package from {extract_dir} to {installed_path}")
+      "Unable to move package from {pkg_cache_dir} to {installed_path}")
   }
 
   installed_path

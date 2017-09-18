@@ -14,7 +14,7 @@
 #' @importFrom filelock lock unlock
 #' @export
 install_binary <- function(filename, lib = .libPaths()[[1L]],
-                               lock = getOption("install.lock", TRUE)) {
+  lock = getOption("install.lock", TRUE)) {
 
   desc <- verify_binary(filename)
   pkg_name <- desc$get("Package")
@@ -25,15 +25,7 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
       Use `pkgload::unload({pkg_name})` to unload it.")
   }
 
-  lib_cache <- library_cache(lib)
-
-  use_lock <- !identical(lock, FALSE)
-  if (use_lock) {
-    lockfile <- file.path(lib_cache, glue("{pkg_name}.lock"))
-    # TODO: timeout and fail?
-    my_lock <- lock(lockfile)
-    on.exit(unlock(my_lock))
-  }
+  lib_cache <- library_cache(lib, pkg_name, lock)
 
   pkg_cache_dir <- file.path(lib_cache, pkg_name)
   if (file.exists(pkg_cache_dir)) {
@@ -68,19 +60,9 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
   installed_path
 }
 
-#' Verify a R binary archive is valid
-#'
-#' @inheritParams install_binary
-#' @return A [desc::desc()] object of the DESCRIPTION file from the binary
-#'   archive.
-#' @importFrom archive archive archive_read archive_write_dir
-#' @importFrom desc desc
-#' @importFrom withr local_connection defer local_libpaths
-#' @importFrom utils head
-#' @export
-verify_binary <- function(filename) {
 
-  tarball <- archive(filename)
+get_archive_pkg_name <- function(tarball) {
+  filename <- attr(tarball, "path")
 
   description_path <- grep("DESCRIPTION$", tarball$path, value = TRUE)
 
@@ -103,6 +85,24 @@ verify_binary <- function(filename) {
       {filename} is not a valid binary, the `DESCRIPTION` file is nested more than 1 level deep {description_path}.
       ")
   }
+  pkg
+}
+
+#' Verify a R binary archive is valid
+#'
+#' @inheritParams install_binary
+#' @return A [desc::desc()] object of the DESCRIPTION file from the binary
+#'   archive.
+#' @importFrom archive archive archive_read archive_write_dir
+#' @importFrom desc desc
+#' @importFrom withr local_connection defer local_libpaths
+#' @importFrom utils head
+#' @export
+verify_binary <- function(filename) {
+
+  tarball <- archive(filename)
+
+  pkg <- get_archive_pkg_name(tarball)
 
   binary_archive_files <- c(
     file.path(pkg, "Meta", "package.rds"),
@@ -141,8 +141,17 @@ verify_binary <- function(filename) {
 #' @inheritParams pkgbuild::build
 #' @param ... Additional arguments passed to [pkgbuild::build].
 install_source <- function(path, lib = .libPaths()[[1L]],
-                               lock = getOption("install.lock", TRUE), quiet = quiet, ...) {
-  tmp_dir <- create_temp_dir(library_cache(lib))
+                               lock = getOption("install.lock", TRUE), quiet = TRUE, ...) {
+
+  if (file.info(path)$isdir) {
+    pkg_name <- desc::desc_get("Package", path)
+  } else {
+    pkg_name <- get_archive_pkg_name(archive(path))
+  }
+
+  lib_cache <- library_cache(lib, pkg_name, lock)
+
+  tmp_dir <- create_temp_dir(tmpdir = lib_cache)
   on.exit(unlink(tmp_dir, recursive = TRUE))
 
   pkgbuild::build(path, tmp_dir, binary = TRUE, quiet = quiet, ...)

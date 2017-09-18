@@ -40,3 +40,7 @@ binary_test_package <- function(name) {
 expect_error_free <- function(...) {
   expect_error(..., regexp = NA)
 }
+
+if (is_loaded("foo")) {
+  pkgload::unload("foo")
+}

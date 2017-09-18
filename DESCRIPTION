@@ -10,6 +10,7 @@ Imports:
     archive,
     desc,
     glue,
+    pkgbuild,
     rlang,
     withr,
     filelock
@@ -25,7 +26,8 @@ Remotes:
     r-lib/withr,
     tidyverse/glue,
     r-lib/filelock,
-    r-lib/callr
+    r-lib/callr,
+    r-lib/pkgbuild
 RoxygenNote: 6.0.1
 Depends: 
     R (>= 3.1)

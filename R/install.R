@@ -25,8 +25,7 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
       Use `pkgload::unload({pkg_name})` to unload it.")
   }
 
-  lib_cache <- file.path(lib, "_cache")
-  dir.create(lib_cache, showWarnings = FALSE)
+  lib_cache <- library_cache(lib)
 
   use_lock <- !identical(lock, FALSE)
   if (use_lock) {

@@ -41,10 +41,16 @@ is_loaded <- function(package) {
   package %in% loadedNamespaces()
 }
 
-create_temp_dir <- function(...) {
-  f <- tempfile(...)
+create_temp_dir <- function(..., tmpdir = tempdir()) {
+  f <- tempfile(tmpdir = tmpdir, ...)
   dir.create(f)
   f
+}
+
+library_cache <- function(lib) {
+  path <- file.path(lib, "_cache")
+  dir.create(path, showWarnings = FALSE)
+  path
 }
 
 sysname <- function() {

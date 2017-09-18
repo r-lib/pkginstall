@@ -29,12 +29,16 @@ local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent
 
 binary_test_package <- function(name) {
 
-  switch(sysname(),
+  binary <- switch(sysname(),
     windows = glue("{name}.zip"),
     linux = glue("{name}_R_x86_64-pc-linux-gnu.tar.gz"),
     mac = glue("{name}.tgz"),
     skip(glue("Cannot test on {sysname()}"))
     )
+  if (!file.exists(binary)) {
+    pkgbuild::build(sub("_.*$", "", name), binary = TRUE, quiet = TRUE)
+  }
+  binary
 }
 
 expect_error_free <- function(...) {

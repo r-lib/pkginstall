@@ -52,6 +52,8 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
       "Unable to move package from {pkg_cache_dir} to {installed_path}")
   }
 
+  # TODO: signal this in some other way, possibly a condition object?
+  cat(glue("Installed {pkg_name}\n\n"))
   installed_path
 }
 

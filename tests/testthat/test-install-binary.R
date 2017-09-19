@@ -54,8 +54,6 @@ test_that("install_binary works for simultaneous installs", {
 
   for (i in seq_len(num)) {
     processes[[i]]$wait(timeout = 3000L)
-    expect_identical(processes[[i]]$get_exit_status(), 0L)
-    expect_identical(processes[[i]]$read_all_output(), "")
-    expect_identical(processes[[i]]$read_all_error(), "")
+    expect_identical(processes[[i]]$get_result(), file.path(libpath, "foo"))
   }
 })

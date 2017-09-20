@@ -7,9 +7,12 @@
 #'   compatibility with `utils::install.packages()`.
 #' @importFrom archive archive archive_extract
 #' @importFrom filelock lock unlock
+#' @importFrom rlang cnd cnd_signal
 #' @export
 install_binary <- function(filename, lib = .libPaths()[[1L]],
   lock = getOption("install.lock", TRUE)) {
+
+  now <- Sys.time()
 
   desc <- verify_binary(filename)
   pkg_name <- desc$get("Package")
@@ -52,8 +55,7 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
       "Unable to move package from {pkg_cache_dir} to {installed_path}")
   }
 
-  # TODO: signal this in some other way, possibly a condition object?
-  cat(glue("Installed {pkg_name}\n\n"))
+  on.exit(cnd_signal(cnd("pkginstall_installation", package = pkg_name, path = installed_path, time = Sys.time() - now)))
   installed_path
 }
 

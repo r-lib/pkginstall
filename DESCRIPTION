@@ -18,7 +18,9 @@ Imports:
     prettyunits,
     rlang,
     withr,
-    clisymbols
+    clisymbols,
+    rematch2,
+    processx
 Suggests: 
     callr,
     covr,

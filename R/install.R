@@ -1,19 +1,36 @@
-#' Install multiple binaries
+#' Install a local R package
 #'
-#' @param filenames filenames of tarballs to install
+#' @param filename filename of package to install. Can be a source
+#' directory, source tarball or binary package.
+#' @inheritParams install_binary
+#' @inheritParams install_source
+install_package <- function(filename, lib = .libPaths()[[1L]],
+  lock = getOption("install.lock", TRUE), ...) {
+  if (is_binary_package(filename)) {
+    return(install_binary(filename, lib, lock))
+  }
+  install_source(filename, lib, lock)
+}
+
+#' Install multiple local packages
+#'
+#' @param filenames filenames of packages to install. Can be source
+#' directories, source tarballs or binary packages.
 #' @inheritParams install_binary
 #' @param num_workers Number of parallel workers to use
-#' @importFrom rlang with_handlers exiting
+#' @importFrom rlang with_handlers exiting inplace
+#' @importFrom processx poll
 #' @export
-install_binaries <- function(filenames, lib = .libPaths()[[1L]],
+install_packages <- function(filenames, lib = .libPaths()[[1L]],
   lock = getOption("install.lock", TRUE), num_workers = 1) {
 
   start <- Sys.time()
 
   if (num_workers == 1) {
     res <- lapply(filenames, function(file) {
-      with_handlers(install_binary(file, lib = lib, lock = lock),
-        pkginstall_installation = exiting(print),
+      with_handlers(install_package(file, lib = lib, lock = lock),
+        pkginstall_installed = inplace(print),
+        pkginstall_built = inplace(print),
         error = exiting(function(e) {
           cat(glue("{red_cross()} {file}\n\n"))
           e
@@ -34,12 +51,12 @@ install_binaries <- function(filenames, lib = .libPaths()[[1L]],
 
         function(filenames, lib, lock, num_workers, crayon.enabled, crayon.colors) {
           options("crayon.enabled" = crayon.enabled, "crayon.colors" = crayon.colors)
-          pkginstall::install_binaries(filenames, lib = lib, lock = lock, num_workers = num_workers)
+          pkginstall::install_packages(filenames, lib = lib, lock = lock, num_workers = num_workers)
         })
   })
 
   repeat {
-    res <- processx::poll(processes, ms = 10 * 1000)
+    res <- poll(processes, ms = 10 * 1000)
     output_ready <- vapply(res, function(x) x[[1]] == "ready", logical(1))
 
     done <- all(!map_lgl(processes, function(x) x$is_incomplete_output()))
@@ -72,8 +89,14 @@ red_cross <- function() red(symbol$cross)
 #' @importFrom prettyunits pretty_dt
 #' @importFrom clisymbols symbol
 #' @export
-print.pkginstall_installation <- function(x, ...) {
-  cat(glue("{green_tick()}{make_style('darkgrey')} {x$package} {cyan}({pretty_dt(x$time)}){reset}\n\n"))
+print.pkginstall_installed <- function(x, ...) {
+  cat(glue("{green_tick()} Installed {make_style('darkgrey')}{x$package} {cyan}({pretty_dt(x$time)}){reset}\n\n"))
+  invisible(x)
+}
+
+#' @export
+print.pkginstall_built <- function(x, ...) {
+  cat(glue("{green_tick()} Built {make_style('darkgrey')}{x$package} {cyan}({pretty_dt(x$time)}){reset}\n\n"))
   invisible(x)
 }
 
@@ -94,4 +117,11 @@ print.installation_results <- function(x, ...) {
   cat(glue("
       \n{successes} packages installed ({successes}{green_tick()} {sum(failures)}{red_cross()}) in {pretty_dt(attr(x, 'elapsed'))}.\n
       "))
+}
+
+is_binary_package <- function(filename) {
+  tryCatch({
+    verify_binary(filename)
+    TRUE
+  }, error = function(e) FALSE)
 }

@@ -57,12 +57,9 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
       "Unable to move package from {pkg_cache_dir} to {installed_path}")
   }
 
-  on.exit(
-    cnd_signal(
-      cnd("pkginstall_installation",
-        package = pkg_name, path = installed_path, time = Sys.time() - now)
-      ),
-    add = TRUE)
+  cnd_signal(
+    cnd("pkginstall_installed",
+      package = pkg_name, path = installed_path, time = Sys.time() - now, type = "binary"))
 
   installed_path
 }

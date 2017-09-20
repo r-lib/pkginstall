@@ -17,7 +17,8 @@ Imports:
     pkgbuild,
     prettyunits,
     rlang,
-    withr
+    withr,
+    clisymbols
 Suggests: 
     callr,
     covr,

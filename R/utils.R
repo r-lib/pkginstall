@@ -67,3 +67,5 @@ sysname <- function() {
   res[!is.na(map)] <- map
   res
 }
+
+map_lgl <- get("map_lgl", asNamespace("rlang"))

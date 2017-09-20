@@ -47,19 +47,30 @@ create_temp_dir <- function(..., tmpdir = tempdir()) {
   f
 }
 
-library_cache <- function(lib, pkg_name, lock = TRUE) {
+library_cache <- function(lib) {
   lib_cache <- file.path(lib, "_cache")
   dir.create(lib_cache, recursive = TRUE, showWarnings = FALSE)
-
-  use_lock <- !identical(lock, FALSE)
-  if (use_lock) {
-    lockfile <- file.path(lib_cache, glue("{pkg_name}.lock"))
-    # TODO: timeout and fail?
-    my_lock <- lock(lockfile)
-    withr::defer(unlock(my_lock))
-  }
   lib_cache
 }
+
+lock_cache <- function(cache, pkg_name, lock = TRUE) {
+  use_lock <- !identical(lock, FALSE)
+  my_lock <- NULL
+  if (use_lock) {
+    lockfile <- file.path(cache, glue("{pkg_name}.lock"))
+    # TODO: timeout and fail?
+    my_lock <- lock(lockfile)
+  }
+  my_lock
+}
+
+unlock <- function(lock) {
+  if (is.null(lock)) {
+    return()
+  }
+  filelock::unlock(lock)
+}
+
 
 sysname <- function() {
   res <- tolower(Sys.info()[["sysname"]])

@@ -42,7 +42,7 @@ install_binaries <- function(filenames, lib = .libPaths()[[1L]],
     res <- processx::poll(processes, ms = 10 * 1000)
     output_ready <- vapply(res, function(x) x[[1]] == "ready", logical(1))
 
-    done <- all(!vapply(processes, function(x) x$is_incomplete_output(), logical(1)))
+    done <- all(!map_lgl(processes, function(x) x$is_incomplete_output()))
     if (done) {
       break
     }

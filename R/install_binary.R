@@ -23,7 +23,9 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
       Use `pkgload::unload({pkg_name})` to unload it.")
   }
 
-  lib_cache <- library_cache(lib, pkg_name, lock)
+  lib_cache <- library_cache(lib)
+  lock <- lock_cache(lib_cache, pkg_name, lock)
+  on.exit(unlock(lock))
 
   pkg_cache_dir <- file.path(lib_cache, pkg_name)
   if (file.exists(pkg_cache_dir)) {
@@ -55,7 +57,13 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
       "Unable to move package from {pkg_cache_dir} to {installed_path}")
   }
 
-  on.exit(cnd_signal(cnd("pkginstall_installation", package = pkg_name, path = installed_path, time = Sys.time() - now)))
+  on.exit(
+    cnd_signal(
+      cnd("pkginstall_installation",
+        package = pkg_name, path = installed_path, time = Sys.time() - now)
+      ),
+    add = TRUE)
+
   installed_path
 }
 

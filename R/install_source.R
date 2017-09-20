@@ -15,10 +15,12 @@ install_source <- function(path, lib = .libPaths()[[1L]],
   }
   pkg_name <- desc::desc_get("Package", path)
 
-  lib_cache <- library_cache(lib, pkg_name, lock)
+  lib_cache <- library_cache(lib)
+  lock <- lock_cache(lib_cache, pkg_name, lock)
+  on.exit(unlock(lock))
 
   tmp_dir <- create_temp_dir(tmpdir = lib_cache)
-  on.exit(unlink(tmp_dir, recursive = TRUE))
+  on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
 
   pkgbuild::build(path, tmp_dir, binary = TRUE, quiet = quiet, ...)
   built_files <- list.files(tmp_dir, full.names = TRUE)

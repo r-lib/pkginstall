@@ -52,8 +52,13 @@ test_that("install_binary works for simultaneous installs", {
       function(pkg, libpath) pkginstall::install_binary(pkg, lib = libpath))
   )
 
+  repeat {
+    Sys.sleep(.1)
+    done <- all(!map_lgl(processes, function(x) x$is_alive()))
+    if (done) { break }
+  }
+
   for (i in seq_len(num)) {
-    processes[[i]]$wait(timeout = 3000L)
     expect_identical(processes[[i]]$get_result(), file.path(libpath, "foo"))
   }
 })

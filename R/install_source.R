@@ -25,6 +25,10 @@ install_source <- function(path, lib = .libPaths()[[1L]],
   lock <- lock_cache(lib_cache, pkg_name, lock)
   on.exit(unlock(lock))
 
+  cnd_signal(
+    cnd("pkginstall_begin",
+      package = pkg_name))
+
   tmp_dir <- create_temp_dir(tmpdir = lib_cache)
   on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
 

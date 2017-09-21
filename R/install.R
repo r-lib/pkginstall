@@ -27,16 +27,19 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
   start <- Sys.time()
 
   if (num_workers == 1) {
+    bar <- StatusBar$new()
     res <- lapply(filenames, function(file) {
       with_handlers(install_package(file, lib = lib, lock = lock),
-        pkginstall_installed = inplace(print),
-        pkginstall_built = inplace(print),
+        pkginstall_installed = inplace(function(x) bar$add_message(format(x))),
+        pkginstall_built = inplace(function(x) bar$add_message(format(x))),
+        pkginstall_begin = inplace(function(x) bar$change_status(format(x))),
         error = exiting(function(e) {
-          cat(glue("{red_cross()} {file}\n\n"))
+          bar$add_message(glue("{red_cross()} {basename(file)}"))
           e
         }))
-  })
+    })
     names(res) <- filenames
+    bar$remove()
     return(structure(res, class = "installation_results", elapsed = Sys.time() - start))
   }
 
@@ -89,15 +92,18 @@ red_cross <- function() red(symbol$cross)
 #' @importFrom prettyunits pretty_dt
 #' @importFrom clisymbols symbol
 #' @export
-print.pkginstall_installed <- function(x, ...) {
-  cat(glue("{green_tick()} Installed {make_style('darkgrey')}{x$package} {cyan}({pretty_dt(x$time)}){reset}\n\n"))
-  invisible(x)
+format.pkginstall_installed <- function(x, ...) {
+  glue("{green_tick()} Installed {make_style('darkgrey')}{x$package} {cyan}({pretty_dt(x$time)}){reset}")
 }
 
 #' @export
-print.pkginstall_built <- function(x, ...) {
-  cat(glue("{green_tick()} Built {make_style('darkgrey')}{x$package} {cyan}({pretty_dt(x$time)}){reset}\n\n"))
-  invisible(x)
+format.pkginstall_built <- function(x, ...) {
+  glue("{green_tick()} Built {make_style('darkgrey')}{x$package} {cyan}({pretty_dt(x$time)}){reset}")
+}
+
+#' @export
+format.pkginstall_begin <- function(x, ..., width = getOption("width")) {
+  glue("Building {make_style('darkgrey')}{x$package}{reset}")
 }
 
 #' @importFrom crayon red reset

@@ -20,7 +20,8 @@ Imports:
     withr,
     clisymbols,
     rematch2,
-    processx
+    processx,
+    R6
 Suggests: 
     callr,
     covr,

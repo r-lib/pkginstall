@@ -1,39 +1,52 @@
-clear_line <- function(width = getOption("width")) {
-  cat(sep = "", "\r", strrep(" ", width), "\r")
-}
-
 #' @importFrom R6 R6Class
 StatusBar <- R6Class("StatusBar",
   private = list(
+    con = stdout(),
     current_status = "\n",
     width = integer(),
-    clear = logical(),
-    removed = FALSE
+    removed = FALSE,
+    clear_line = function() {
+      cat(file = private$con, sep = "", "\r", strrep(" ", private$width), "\r")
+    }
   ),
   public = list(
-    initialize = function(width = getOption("width"), clear = TRUE) {
+    initialize = function(width = getOption("width"), con = stdout()) {
       private$width <- width
-      private$clear <- clear
+      private$con <- con
     },
     add_message = function(msg) {
-      clear_line(private$width)
-      cat(msg, "\n", sep = "")
-      cat(private$current_status)
+      private$clear_line()
+      msg <- resize(collapse(msg, "\n"), private$width)
+      cat(file = private$con, msg, "\n", sep = "")
+      cat(file = private$con, private$current_status)
     },
     change_status = function(msg) {
-      clear_line(private$width)
-      private$current_status <- msg
-      cat(private$current_status)
+      private$clear_line()
+      private$current_status <- resize(collapse(msg, "\n"), private$width)
+      cat(file = private$con, private$current_status)
     },
     remove = function() {
       private$removed <- TRUE
-      clear_line(private$width)
+      private$clear_line()
     }
   )
 )
 
+
+#' @importFrom crayon col_substr
+resize <- function(x, width) {
+  x_width <- nchar(strip_style(x), "width")
+  too_wide <- x_width > width
+  if (too_wide) {
+
+    # We need to reset colors in case we chop them off
+    x <- paste0(col_substr(x, 1, width - 3), "...")
+  }
+  x
+}
+
 test <- function(x = .4) {
-  b <- status_bar$new()
+  b <- StatusBar$new(con = stderr())
   b$change_status("Running foo")
   Sys.sleep(x)
   b$change_status("Running bar")
@@ -42,5 +55,5 @@ test <- function(x = .4) {
   Sys.sleep(x)
   b$change_status("Running 12345")
   Sys.sleep(x)
-  b$terminate()
+  b$remove()
 }

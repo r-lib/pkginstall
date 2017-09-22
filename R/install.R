@@ -27,19 +27,20 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
   start <- Sys.time()
 
   if (num_workers == 1) {
-    bar <- StatusBar$new()
     res <- lapply(filenames, function(file) {
       with_handlers(install_package(file, lib = lib, lock = lock),
-        pkginstall_installed = inplace(function(x) bar$add_message(format(x))),
-        pkginstall_built = inplace(function(x) bar$add_message(format(x))),
-        pkginstall_begin = inplace(function(x) bar$change_status(format(x))),
+        pkginstall_installed = inplace(function(x) {
+          message(format(x))
+        }),
+        pkginstall_built = inplace(function(x) message(format(x))),
+        pkginstall_begin = inplace(function(x) message(format(x))),
         error = exiting(function(e) {
-          bar$add_message(glue("{red_cross()} {basename(file)}"))
+          name <- basename(e$package %||% e$path %||% file)
+          message(glue("{red_cross()} Failed {name}"))
           e
         }))
     })
     names(res) <- filenames
-    bar$remove()
     return(structure(res, class = "installation_results", elapsed = Sys.time() - start))
   }
 
@@ -58,32 +59,58 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
         })
   })
 
-  repeat {
-    res <- poll(processes, ms = 10 * 1000)
-    output_ready <- vapply(res, function(x) x[[1]] == "ready", logical(1))
+  running <- character()
+  bar <- StatusBar$new()
 
-    done <- all(!map_lgl(processes, function(x) x$is_incomplete_output()))
-    if (done) {
+  done <- FALSE
+  repeat {
+    res <- poll(processes, -1)
+    output_ready <- vapply(res, function(x) any(x == "ready"), logical(1))
+
+    for (i in which(!done & output_ready)) {
+      lines <- processes[[i]]$read_error_lines()
+      output_lines <- processes[[i]]$read_output_lines()
+      lines <- remove_spaces(lines)
+      if (length(lines) > 0) {
+        is_running <- grepl("^Building", strip_style(lines))
+        running <- union(running, sub("^Building ", "", strip_style(lines[is_running])))
+        finished <- lines[!is_running]
+
+        if (length(finished) > 0 && nzchar(finished)) {
+
+          # remove installed and failed from running
+          installed <- strip_style(finished)[grepl("^. Installed ", strip_style(finished))]
+          installed <- sub(". Installed ([^[:space:]]+).*", "\\1", installed)
+
+          failed <- strip_style(finished)[grepl("^. Failed ", strip_style(finished))]
+          failed <- sub(". Failed ([^[:space:]]+).*", "\\1", failed)
+          running <- setdiff(running, c(installed, failed))
+          bar$add_message(glue("{i}: {finished}"))
+        }
+        if (length(running)) {
+          bar$change_status(glue('Building {greyish()}{collapse(running, sep = ", ")}{reset}'))
+        }
+      }
+    }
+    done <- !map_lgl(processes, function(x) x$is_alive())
+    if (all(done)) {
       break
     }
-    for (i in seq_along(processes)) {
-      lines <- processes[[i]]$read_output_lines()
-      err_lines <- processes[[i]]$read_error_lines()
-      if (length(lines) > 0 && nzchar(lines)) {
-        cat(glue("{i}: {lines}"), sep = "\n")
-      }
-      if (length(err_lines) > 0 && nzchar(err_lines)) {
-        cat(glue("{crayon::red}{i}:\n {lines}\n{crayon::reset}"))
-      }
-    }
   }
+
+  bar$remove()
+
   structure(
     Reduce(append, lapply(processes, function(x) x$get_result())),
     class = "installation_results", elapsed = Sys.time() - start)
 }
 
-#' @importFrom crayon make_style
-greyish <- make_style("darkgrey")
+remove_spaces <- function(x) {
+  x <- x[!grepl("^[[:space:]]*$", x)]
+}
+
+#' @importFrom crayon make_style strip_style
+greyish <- function() make_style("darkgrey")
 
 green_tick <- function() green(symbol$tick)
 red_cross <- function() red(symbol$cross)
@@ -93,17 +120,17 @@ red_cross <- function() red(symbol$cross)
 #' @importFrom clisymbols symbol
 #' @export
 format.pkginstall_installed <- function(x, ...) {
-  glue("{green_tick()} Installed {make_style('darkgrey')}{x$package} {cyan}({pretty_dt(x$time)}){reset}")
+  glue("{green_tick()} Installed {greyish()}{x$package} {cyan}({pretty_dt(x$time)}){reset}")
 }
 
 #' @export
 format.pkginstall_built <- function(x, ...) {
-  glue("{green_tick()} Built {make_style('darkgrey')}{x$package} {cyan}({pretty_dt(x$time)}){reset}")
+  glue("{green_tick()} Built {greyish()}{x$package} {cyan}({pretty_dt(x$time)}){reset}")
 }
 
 #' @export
-format.pkginstall_begin <- function(x, ..., width = getOption("width")) {
-  glue("Building {make_style('darkgrey')}{x$package}{reset}")
+format.pkginstall_begin <- function(x, ...) {
+  glue("Building {greyish()}{x$package}{reset}")
 }
 
 #' @importFrom crayon red reset

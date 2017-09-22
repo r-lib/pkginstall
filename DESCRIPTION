@@ -10,18 +10,18 @@ Depends:
     R (>= 3.1)
 Imports: 
     archive,
+    clisymbols,
     crayon,
     desc,
     filelock,
     glue,
     pkgbuild,
     prettyunits,
-    rlang,
-    withr,
-    clisymbols,
-    rematch2,
     processx,
-    R6
+    R6,
+    rematch2,
+    rlang,
+    withr
 Suggests: 
     callr,
     covr,
@@ -29,11 +29,11 @@ Suggests:
 ByteCompile: true
 Encoding: UTF-8
 LazyData: true
-Remotes:
-    jimhester/archive,
+Remotes: jimhester/archive,
     r-lib/withr,
     tidyverse/glue,
     r-lib/filelock,
     r-lib/callr,
-    r-lib/pkgbuild
+    r-lib/pkgbuild,
+    r-lib/desc
 RoxygenNote: 6.0.1

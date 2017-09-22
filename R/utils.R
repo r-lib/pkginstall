@@ -16,23 +16,30 @@ collapse_quote_transformer <- function(code, envir, data) {
   res
 }
 
-#' @importFrom rlang abort
+#' @importFrom rlang error_cnd
 #' @importFrom glue glue
-abort <- function(msg, type = NULL, .envir = parent.frame()) {
-  rlang::abort(glue(msg,
-      .envir = parent.frame(),
-      .transformer = collapse_quote_transformer),
-    type = type)
+abort <- function(msg, type = NULL, ..., .envir = parent.frame()) {
+  stop(
+    error_cnd(
+      type = type, ...,
+      .msg = glue(msg,
+        .envir = parent.frame(),
+        .transformer = collapse_quote_transformer),
+      ))
 }
 
-#' @importFrom rlang warn
-warn <- function(msg, type = NULL, .envir = parent.frame()) {
-  rlang::warn(glue(msg,
-      .envir = parent.frame(),
-      .transformer = collapse_quote_transformer),
-    type = type)
+#' @importFrom rlang warning_cnd
+warn <- function(msg, type = NULL, ..., .envir = parent.frame()) {
+  warning(
+    warning_cnd(
+      type = type, ...,
+      .msg = glue(msg,
+        .envir = parent.frame(),
+        .transformer = collapse_quote_transformer),
+      ))
 }
 
+#' @importFrom rlang %||%
 `%!in%` <- function(x, y) {
   !x %in% y
 }

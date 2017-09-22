@@ -20,7 +20,8 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
   if (is_loaded(pkg_name)) {
     abort(type = "runtime_error",
      "Package {pkg_name} is already loaded and cannot be installed.
-      Use `pkgload::unload({pkg_name})` to unload it.")
+      Use `pkgload::unload({pkg_name})` to unload it.",
+     package = pkg_name)
   }
 
   lib_cache <- library_cache(lib)
@@ -43,18 +44,21 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
     ret <- file.rename(installed_path, move_to)
     if (!ret) {
       abort(type = "filesystem",
-        "Failed to move installed package at {installed_path}")
+        "Failed to move installed package at {installed_path}",
+        package = pkg_name)
     }
     ret <- unlink(move_to, recursive = TRUE, force = TRUE)
     if (ret != 0) {
       warn(type = "filesystem",
-        "Failed to remove installed package at {move_to}")
+        "Failed to remove installed package at {move_to}",
+        package = pkg_name)
     }
   }
   ret <- file.rename(pkg_cache_dir, installed_path)
   if (!ret) {
     abort(type = "filesystem",
-      "Unable to move package from {pkg_cache_dir} to {installed_path}")
+      "Unable to move package from {pkg_cache_dir} to {installed_path}",
+      package = pkg_name)
   }
 
   cnd_signal(

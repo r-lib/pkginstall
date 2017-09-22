@@ -44,16 +44,3 @@ resize <- function(x, width) {
   }
   x
 }
-
-test <- function(x = .4) {
-  b <- StatusBar$new(con = stderr())
-  b$change_status("Running foo")
-  Sys.sleep(x)
-  b$change_status("Running bar")
-  Sys.sleep(x)
-  b$add_message("done baz")
-  Sys.sleep(x)
-  b$change_status("Running 12345")
-  Sys.sleep(x)
-  b$remove()
-}

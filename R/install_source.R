@@ -15,19 +15,38 @@ install_source <- function(path, lib = .libPaths()[[1L]],
   }
   if (identical(is_tarball, TRUE)) {
     pkg_name <- get_archive_pkg_name(archive(path))
+  } else {
+    pkg_name <- desc::desc_get("Package", path)
+  }
+  cnd_signal(
+    cnd("pkginstall_begin",
+      package = pkg_name,
+      path = path))
+
+  if (is_tarball) {
     tmp_path <- tempfile()
     archive_extract(path, tmp_path)
-    return(install_source(file.path(tmp_path, pkg_name), lib, lock, quiet, ...))
+
+    return(
+      with_handlers(
+        pkginstall_begin = inplace(identity, muffle = TRUE),
+        pkginstall_built = inplace(function(cond) {
+          cond$time = Sys.time() - now
+          cnd_signal(cond)
+        }, muffle = TRUE),
+        error = inplace(function(cond) {
+          cond$package <- pkg_name
+          cnd_signal(cond)
+        }),
+        install_source(file.path(tmp_path, pkg_name), lib, lock, quiet, ...)
+      )
+    )
   }
   pkg_name <- desc::desc_get("Package", path)
 
   lib_cache <- library_cache(lib)
   lock <- lock_cache(lib_cache, pkg_name, lock)
   on.exit(unlock(lock))
-
-  cnd_signal(
-    cnd("pkginstall_begin",
-      package = pkg_name))
 
   tmp_dir <- create_temp_dir(tmpdir = lib_cache)
   on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)

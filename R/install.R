@@ -60,7 +60,11 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
   })
 
   running <- character()
-  bar <- StatusBar$new()
+  bar <- progress::progress_bar$new(
+    total = length(filenames),
+    format = "[:current/:total] :elapsedfull | ETA: :eta | :packages",
+    stream = stdout()
+  )
 
   done <- FALSE
   repeat {
@@ -85,10 +89,11 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
           failed <- strip_style(finished)[grepl("^. Failed ", strip_style(finished))]
           failed <- sub(". Failed ([^[:space:]]+).*", "\\1", failed)
           running <- setdiff(running, c(installed, failed))
-          bar$add_message(glue("{i}: {finished}"))
+          bar$message(glue("{i}: {finished}"))
+          bar$tick(length(installed) + length(failed), tokens = list(packages = collapse(running, ", ")))
         }
         if (length(running)) {
-          bar$change_status(glue('Building {greyish()}{collapse(running, sep = ", ")}{reset}'))
+          bar$tick(0, tokens = list(packages = collapse(running, ", ")))
         }
       }
     }
@@ -97,8 +102,6 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
       break
     }
   }
-
-  bar$remove()
 
   structure(
     Reduce(append, lapply(processes, function(x) x$get_result())),

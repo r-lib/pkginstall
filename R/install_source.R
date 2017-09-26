@@ -65,13 +65,25 @@ install_source <- function(path, lib = .libPaths()[[1L]],
   install_binary(built_files, lib, lock = lock)
 }
 
-# pkgbuild puts the stderr output in stderr, and R CMD INSTALL / R CMD build
+# pkgbuild puts the stderr output in `e$stderr`, and R CMD INSTALL / R CMD build
 # outputs additional information about the installation directory we don't
 # want.
 #' @importFrom rematch2 re_match_all
 handle_pkgbuild_errors <- function(e) {
-  errors <- sub("ERROR: ", "", grep("ERROR: [^\n]+", strsplit(e$stderr, "\n")[[1L]], value = TRUE))
-  e$message <- collapse(errors, "\n")
+  stderr <- grep("^[^*]+", strsplit(e$stderr, "\n")[[1L]], value = TRUE)
+  errors <- grepl("ERROR: [^\n]+", stderr)
+  e$message <- collapse(c(bold(sub("^ERROR: ", "", stderr[errors])), parse_compiler_errors(stderr[!errors])), "\n")
   e$call <- NULL
   stop(e)
+}
+
+#' @importFrom glue glue_data
+#' @importFrom crayon red magenta bold
+parse_compiler_errors <- function(lines) {
+  m <- rematch2::re_match(lines, "^(?<file>[^:]+):(?<line>[0-9]+):(?:(?<column>[0-9]+?):)? (?<type>error|warning): (?<msg>.+)")
+  error_lines <- !is.na(m[[1]])
+  m_err <- m[error_lines, ]
+  m_err$type <- ifelse(m_err$type == "error", red(m_err$type), magenta(m_err$type))
+  lines[error_lines] <- glue_data(m_err, "{bold}{file}:{line}:{column}: {type}: {msg}{reset}")
+  lines
 }

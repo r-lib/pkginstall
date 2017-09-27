@@ -37,8 +37,9 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
         error = exiting(function(e) {
           name <- basename(e$package %||% e$path %||% file)
           message(glue("{red_cross()} Failed {name}"))
-          e
-        }))
+          stop(e)
+        })
+        )
     })
     names(res) <- filenames
     return(structure(res, class = "installation_results", elapsed = Sys.time() - start))
@@ -63,14 +64,14 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
   bar <- progress::progress_bar$new(
     total = length(filenames),
     format = "[:current/:total] :elapsedfull | ETA: :eta | :packages",
-    stream = stdout()
+    stream = stdout(),
+    show_after = 0
   )
 
   done <- FALSE
   repeat {
     res <- poll(processes, -1)
     output_ready <- vapply(res, function(x) any(x == "ready"), logical(1))
-
     for (i in which(!done & output_ready)) {
       lines <- processes[[i]]$read_error_lines()
       output_lines <- processes[[i]]$read_output_lines()
@@ -88,6 +89,13 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
 
           failed <- strip_style(finished)[grepl("^. Failed ", strip_style(finished))]
           failed <- sub(". Failed ([^[:space:]]+).*", "\\1", failed)
+          if (length(failed)) {
+            bar$terminate()
+            lines <- c(lines, processes[[i]]$read_all_error_lines())
+            output_lines <- c(output_lines, processes[[i]]$read_all_output_lines())
+            lapply(processes, function(x) x$kill(tools::SIGINT))
+            stop(collapse(c(lines, output_lines), sep = "\n"), call. = FALSE)
+          }
           running <- setdiff(running, c(installed, failed))
           bar$message(glue("{i}: {finished}"))
           bar$tick(length(installed) + length(failed), tokens = list(packages = collapse(running, ", ")))

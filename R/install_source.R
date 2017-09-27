@@ -72,7 +72,7 @@ install_source <- function(path, lib = .libPaths()[[1L]],
 handle_pkgbuild_errors <- function(e) {
   stderr <- grep("^[^*]+", strsplit(e$stderr, "\n")[[1L]], value = TRUE)
   errors <- grepl("ERROR: [^\n]+", stderr)
-  e$message <- collapse(c(bold(sub("^ERROR: ", "", stderr[errors])), parse_compiler_errors(stderr[!errors])), "\n")
+  e$message <- collapse(c(sub("^ERROR: ", "", stderr[errors]), parse_compiler_errors(stderr[!errors])), "\n")
   e$call <- NULL
   stop(e)
 }

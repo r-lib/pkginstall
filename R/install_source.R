@@ -3,6 +3,7 @@
 #' @inheritParams install_binary
 #' @inheritParams pkgbuild::build
 #' @param ... Additional arguments passed to [pkgbuild::build].
+#' @export
 install_source <- function(path, lib = .libPaths()[[1L]],
                                lock = getOption("install.lock", TRUE), quiet = TRUE, ...) {
 

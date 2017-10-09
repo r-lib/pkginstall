@@ -50,20 +50,25 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
 
   if (num_workers == 1) {
     res <- lapply(filenames, function(file) {
-      with_handlers(install_package(file, lib = lib, lock = lock),
-        pkginstall_installed = inplace(function(x) {
-          bar$message(format(x))
-          bar$tick(1, tokens = list(packages = file))
-        }),
-        pkginstall_built = inplace(function(x) bar$message(format(x))),
-        pkginstall_begin = inplace(function(x) bar$message(format(x))),
+      bar$tick(0, tokens = list(packages = get_pkg_name(file)))
+      format_message <- inplace(function(x) bar$message(format(x)))
+      installed_path <- with_handlers(
+        pkginstall_installed = format_message,
+        pkginstall_built = format_message,
+        pkginstall_begin = format_message,
         error = exiting(function(e) {
           name <- basename(e$package %||% e$path %||% file)
           bar$message(glue("{red_cross()} Failed {name}"))
           stop(e)
-        })
-        )
+        }),
+
+        install_package(file, lib = lib, lock = lock)
+      )
+
+      bar$tick(1)
+      installed_path
     })
+
     names(res) <- filenames
     return(structure(res, class = "installation_results", elapsed = Sys.time() - start))
   }
@@ -74,13 +79,13 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
 
   running <- character()
   # Currently assumes the order of installation is not important
-  c(files, processes) %<-% get_processes(filenames, list(), num_workers, lib, lock)
+  c(files, processes, results) %<-% get_processes(filenames, processes = list(), results = list(), num_workers, lib, lock)
   while(length(processes) > 0) {
     res <- poll(processes, -1)
     output_ready <- vapply(res, function(x) any(x == "ready"), logical(1))
     for (i in which(output_ready)) {
-      lines <- processes[[i]]$read_error_lines()
-      output_lines <- processes[[i]]$read_output_lines()
+      error_lines <- processes[[i]]$read_error_lines()
+      lines <- processes[[i]]$read_output_lines()
       lines <- remove_spaces(lines)
       if (length(lines) > 0) {
         is_running <- grepl("^Building", strip_style(lines))
@@ -103,7 +108,7 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
             stop(collapse(c(lines, output_lines), sep = "\n"), call. = FALSE)
           }
           running <- setdiff(running, c(installed, failed))
-          bar$message(glue("{i}: {finished}"))
+          bar$message(finished)
           update_progress(length(installed) + length(failed))
         }
         if (!bar$finished && length(running)) {
@@ -111,12 +116,10 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
         }
       }
     }
-    c(files, processes) %<-% get_processes(files, processes, num_workers, lib, lock)
+    c(files, processes, results) %<-% get_processes(files, processes, results, num_workers, lib, lock)
   }
 
-  cat(glue("
-      {length(filenames)} packages installed in {pretty_dt(Sys.time() - start)}.
-      "), sep = "\n")
+  structure(results, class = "installation_results", elapsed = Sys.time() - start)
 }
 
 remove_spaces <- function(x) {
@@ -147,23 +150,21 @@ format.pkginstall_begin <- function(x, ...) {
   glue("Building {greyish()}{x$package}{reset}")
 }
 
-#' @importFrom crayon red reset
+#' @importFrom crayon blue reset
 #' @importFrom clisymbols symbol
 #' @export
 print.installation_results <- function(x, ...) {
-  failures <- map_lgl(x, inherits, "error")
-  if (any(failures)) {
-    for (failure in which(failures)) {
-      cat(glue("
-          \n{red_cross()} {names(x)[[failure]]}
-          {red}{conditionMessage(x[[failure]])}{reset}\n
-          "))
-    }
+  time <- cyan(pretty_dt(attr(x, 'elapsed')))
+  if (length(x) > 1) {
+    cat(glue("
+        {length(x)} packages installed in {time}.
+        "))
+  } else {
+    cat(glue("
+        {blue}{names(x)}{reset} installed in {time} at {single_quote(x)}.
+        "))
   }
-  successes <- length(x) - sum(failures)
-  cat(glue("
-      \n{successes} packages installed ({successes}{green_tick()} {sum(failures)}{red_cross()}) in {pretty_dt(attr(x, 'elapsed'))}.\n
-      "))
+  invisible(x)
 }
 
 is_binary_package <- function(filename) {
@@ -186,8 +187,9 @@ new_install_packages_process <-  function(file, lib, lock) {
     })
 }
 
-get_processes <- function(filenames, processes, num_workers, lib, lock) {
+get_processes <- function(filenames, processes, results, num_workers, lib, lock) {
   done <- map_lgl(processes, function(x) !x$is_alive() && !x$is_incomplete_output() && !x$is_incomplete_error())
+  results <- append(results, lapply(processes[done], function(x) x$get_result()))
   processes <- processes[!done]
 
   while (length(filenames) > 0 && length(processes) < num_workers) {
@@ -195,5 +197,5 @@ get_processes <- function(filenames, processes, num_workers, lib, lock) {
     filenames <- filenames[-1]
   }
 
-  return(list(filenames, processes))
+  return(list(filenames, processes, results))
 }

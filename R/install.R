@@ -18,29 +18,48 @@ install_package <- function(filename, lib = .libPaths()[[1L]],
 #' directories, source tarballs or binary packages.
 #' @inheritParams install_binary
 #' @param num_workers Number of parallel workers to use
+#' @param progress show a progress bar of installation progress.
 #' @importFrom rlang with_handlers exiting inplace
 #' @importFrom processx poll
 #' @importFrom zeallot %<-%
 #' @importFrom tibble data_frame
 #' @export
 install_packages <- function(filenames, lib = .libPaths()[[1L]],
-  lock = getOption("install.lock", TRUE), num_workers = 1) {
+  lock = getOption("install.lock", TRUE), num_workers = 1, progress = interactive()) {
 
   start <- Sys.time()
 
   pkg_info <- data_frame(path = filenames, name = map_chr(filenames, get_pkg_name), binary = map_lgl(filenames, is_binary_package))
 
+  bar_fmt <- if (isTRUE(progress)) {
+    collapse(sep = " | ", c(
+      "[:current/:total] :elapsedfull",
+      "ETA: :eta",
+      if (num_workers > 1) ":processes/:num_workers",
+      ":packages"))
+  } else {
+    ""
+  }
+
+  bar <- progress::progress_bar$new(
+    total = length(filenames),
+    format = bar_fmt,
+    stream = stdout(),
+    show_after = 0
+  )
+
   if (num_workers == 1) {
     res <- lapply(filenames, function(file) {
       with_handlers(install_package(file, lib = lib, lock = lock),
         pkginstall_installed = inplace(function(x) {
-          message(format(x))
+          bar$message(format(x))
+          bar$tick(1, tokens = list(packages = file))
         }),
-        pkginstall_built = inplace(function(x) message(format(x))),
-        pkginstall_begin = inplace(function(x) message(format(x))),
+        pkginstall_built = inplace(function(x) bar$message(format(x))),
+        pkginstall_begin = inplace(function(x) bar$message(format(x))),
         error = exiting(function(e) {
           name <- basename(e$package %||% e$path %||% file)
-          message(glue("{red_cross()} Failed {name}"))
+          bar$message(glue("{red_cross()} Failed {name}"))
           stop(e)
         })
         )
@@ -49,14 +68,11 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
     return(structure(res, class = "installation_results", elapsed = Sys.time() - start))
   }
 
-  running <- character()
-  bar <- progress::progress_bar$new(
-    total = length(filenames),
-    format = "[:current/:total] :elapsedfull | ETA: :eta | :processes/:num_workers | :packages",
-    stream = stdout(),
-    show_after = 0
-  )
+  update_progress <- function(count) {
+    bar$tick(count, tokens = list(packages = collapse(running, ", "), processes = length(processes), num_workers = num_workers))
+  }
 
+  running <- character()
   # Currently assumes the order of installation is not important
   c(files, processes) %<-% get_processes(filenames, list(), num_workers, lib, lock)
   while(length(processes) > 0) {
@@ -88,10 +104,10 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
           }
           running <- setdiff(running, c(installed, failed))
           bar$message(glue("{i}: {finished}"))
-          bar$tick(length(installed) + length(failed), tokens = list(packages = collapse(running, ", "), processes = length(processes), num_workers = num_workers))
+          update_progress(length(installed) + length(failed))
         }
         if (!bar$finished && length(running)) {
-          bar$tick(0, tokens = list(packages = collapse(running, ", "), processes = length(processes), num_workers = num_workers))
+          update_progress(0)
         }
       }
     }

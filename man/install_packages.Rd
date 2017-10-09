@@ -5,7 +5,8 @@
 \title{Install multiple local packages}
 \usage{
 install_packages(filenames, lib = .libPaths()[[1L]],
-  lock = getOption("install.lock", TRUE), num_workers = 1)
+  lock = getOption("install.lock", TRUE), num_workers = 1,
+  progress = interactive())
 }
 \arguments{
 \item{filenames}{filenames of packages to install. Can be source
@@ -18,6 +19,8 @@ installing. It defaults to using `getOption("install.lock")` for
 compatibility with `utils::install.packages()`.}
 
 \item{num_workers}{Number of parallel workers to use}
+
+\item{progress}{show a progress bar of installation progress.}
 }
 \description{
 Install multiple local packages

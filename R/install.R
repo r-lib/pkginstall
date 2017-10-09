@@ -29,7 +29,7 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
 
   start <- Sys.time()
 
-  pkg_info <- data_frame(path = filenames, name = map_chr(filenames, get_pkg_name), binary = map_lgl(filenames, is_binary_package))
+  pkg_info <- data_frame(path = filenames, name = map_chr(filenames, get_pkg_name), is_binary = map_lgl(filenames, is_binary_package))
 
   bar_fmt <- if (isTRUE(progress)) {
     collapse(sep = " | ", c(
@@ -79,7 +79,7 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
 
   running <- character()
   # Currently assumes the order of installation is not important
-  c(files, processes, results) %<-% get_processes(filenames, processes = list(), results = list(), num_workers, lib, lock)
+  c(files, processes, results) %<-% get_processes(pkg_info, processes = list(), results = list(), num_workers, lib, lock)
   while(length(processes) > 0) {
     res <- poll(processes, -1)
     output_ready <- vapply(res, function(x) any(x == "ready"), logical(1))
@@ -107,9 +107,9 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
             lapply(processes, function(x) x$kill(tools::SIGINT))
             stop(collapse(c(lines, output_lines), sep = "\n"), call. = FALSE)
           }
-          running <- setdiff(running, c(installed, failed))
+          running <- setdiff(running, installed)
           bar$message(finished)
-          update_progress(length(installed) + length(failed))
+          update_progress(length(installed))
         }
         if (!bar$finished && length(running)) {
           update_progress(0)
@@ -118,6 +118,7 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
     }
     c(files, processes, results) %<-% get_processes(files, processes, results, num_workers, lib, lock)
   }
+  bar$terminate()
 
   structure(results, class = "installation_results", elapsed = Sys.time() - start)
 }
@@ -157,7 +158,7 @@ print.installation_results <- function(x, ...) {
   time <- cyan(pretty_dt(attr(x, 'elapsed')))
   if (length(x) > 1) {
     cat(glue("
-        {length(x)} packages installed in {time}.
+        {sum(map_int(x, length))} packages installed in {time}.
         "))
   } else {
     cat(glue("
@@ -187,15 +188,22 @@ new_install_packages_process <-  function(file, lib, lock) {
     })
 }
 
-get_processes <- function(filenames, processes, results, num_workers, lib, lock) {
+get_processes <- function(pkg_info, processes, results, num_workers, lib, lock) {
   done <- map_lgl(processes, function(x) !x$is_alive() && !x$is_incomplete_output() && !x$is_incomplete_error())
   results <- append(results, lapply(processes[done], function(x) x$get_result()))
   processes <- processes[!done]
 
-  while (length(filenames) > 0 && length(processes) < num_workers) {
-    processes[[length(processes) + 1]] <- new_install_packages_process(filenames[[1]], lib, lock)
-    filenames <- filenames[-1]
+  while (NROW(pkg_info) > 0 && length(processes) < num_workers) {
+    # Distribute all binary packages to a single worker
+    # TODO: maybe distribute them to all workers?
+    if (any(pkg_info$is_binary)) {
+      processes[[length(processes) + 1]] <- new_install_packages_process(pkg_info$path[pkg_info$is_binary], lib, lock)
+      pkg_info <- pkg_info[!pkg_info$is_binary, ]
+    } else {
+      processes[[length(processes) + 1]] <- new_install_packages_process(pkg_info$path[[1]], lib, lock)
+      pkg_info <- pkg_info[-1, ]
+    }
   }
 
-  return(list(filenames, processes, results))
+  return(list(pkg_info, processes, results))
 }

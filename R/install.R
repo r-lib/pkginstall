@@ -21,11 +21,14 @@ install_package <- function(filename, lib = .libPaths()[[1L]],
 #' @importFrom rlang with_handlers exiting inplace
 #' @importFrom processx poll
 #' @importFrom zeallot %<-%
+#' @importFrom tibble data_frame
 #' @export
 install_packages <- function(filenames, lib = .libPaths()[[1L]],
   lock = getOption("install.lock", TRUE), num_workers = 1) {
 
   start <- Sys.time()
+
+  pkg_info <- data_frame(path = filenames, name = map_chr(filenames, get_pkg_name), binary = map_lgl(filenames, is_binary_package))
 
   if (num_workers == 1) {
     res <- lapply(filenames, function(file) {

@@ -21,7 +21,8 @@ Imports:
     rematch2,
     rlang,
     withr,
-    progress
+    progress,
+    zeallot
 Suggests: 
     callr,
     covr,

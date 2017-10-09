@@ -69,7 +69,11 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
 }
 
 
-get_archive_pkg_name <- function(tarball) {
+get_pkg_name <- function(tarball) {
+  if (!inherits(tarball, "archive")) {
+    tarball <- archive(tarball)
+  }
+
   filename <- attr(tarball, "path")
 
   description_path <- grep("DESCRIPTION$", tarball$path, value = TRUE)

@@ -87,3 +87,5 @@ sysname <- function() {
 }
 
 map_lgl <- get("map_lgl", asNamespace("rlang"))
+
+map_chr <- get("map_chr", asNamespace("rlang"))

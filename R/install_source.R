@@ -15,7 +15,7 @@ install_source <- function(path, lib = .libPaths()[[1L]],
       "File {path} does not exist")
   }
   if (identical(is_tarball, TRUE)) {
-    pkg_name <- get_archive_pkg_name(archive(path))
+    pkg_name <- get_pkg_name(path)
   } else {
     pkg_name <- desc::desc_get("Package", path)
   }

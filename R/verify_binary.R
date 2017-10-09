@@ -12,7 +12,7 @@ verify_binary <- function(filename) {
 
   tarball <- archive(filename)
 
-  pkg <- get_archive_pkg_name(tarball)
+  pkg <- get_pkg_name(tarball)
 
   binary_archive_files <- c(
     file.path(pkg, "Meta", "package.rds"),

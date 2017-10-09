@@ -20,6 +20,7 @@ install_package <- function(filename, lib = .libPaths()[[1L]],
 #' @param num_workers Number of parallel workers to use
 #' @importFrom rlang with_handlers exiting inplace
 #' @importFrom processx poll
+#' @importFrom zeallot %<-%
 #' @export
 install_packages <- function(filenames, lib = .libPaths()[[1L]],
   lock = getOption("install.lock", TRUE), num_workers = 1) {
@@ -45,34 +46,20 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
     return(structure(res, class = "installation_results", elapsed = Sys.time() - start))
   }
 
-  # Assumes the order of installation is not important
-  processes <- lapply(split(filenames, seq_along(filenames) %% num_workers),
-    function(files) {
-      callr::r_bg(
-        args = list(
-          filenames = files, lib = lib, lock = lock, num_workers = 1,
-          crayon.enabled = getOption("crayon.enabled"),
-          crayon.colors = getOption("crayon.colors")),
-
-        function(filenames, lib, lock, num_workers, crayon.enabled, crayon.colors) {
-          options("crayon.enabled" = crayon.enabled, "crayon.colors" = crayon.colors)
-          pkginstall::install_packages(filenames, lib = lib, lock = lock, num_workers = num_workers)
-        })
-  })
-
   running <- character()
   bar <- progress::progress_bar$new(
     total = length(filenames),
-    format = "[:current/:total] :elapsedfull | ETA: :eta | :packages",
+    format = "[:current/:total] :elapsedfull | ETA: :eta | :processes/:num_workers | :packages",
     stream = stdout(),
     show_after = 0
   )
 
-  done <- FALSE
-  repeat {
+  # Currently assumes the order of installation is not important
+  c(files, processes) %<-% get_processes(filenames, list(), num_workers, lib, lock)
+  while(length(processes) > 0) {
     res <- poll(processes, -1)
     output_ready <- vapply(res, function(x) any(x == "ready"), logical(1))
-    for (i in which(!done & output_ready)) {
+    for (i in which(output_ready)) {
       lines <- processes[[i]]$read_error_lines()
       output_lines <- processes[[i]]$read_output_lines()
       lines <- remove_spaces(lines)
@@ -98,22 +85,19 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
           }
           running <- setdiff(running, c(installed, failed))
           bar$message(glue("{i}: {finished}"))
-          bar$tick(length(installed) + length(failed), tokens = list(packages = collapse(running, ", ")))
+          bar$tick(length(installed) + length(failed), tokens = list(packages = collapse(running, ", "), processes = length(processes), num_workers = num_workers))
         }
-        if (length(running)) {
-          bar$tick(0, tokens = list(packages = collapse(running, ", ")))
+        if (!bar$finished && length(running)) {
+          bar$tick(0, tokens = list(packages = collapse(running, ", "), processes = length(processes), num_workers = num_workers))
         }
       }
     }
-    done <- !map_lgl(processes, function(x) x$is_alive())
-    if (all(done)) {
-      break
-    }
+    c(files, processes) %<-% get_processes(files, processes, num_workers, lib, lock)
   }
 
-  structure(
-    Reduce(append, lapply(processes, function(x) x$get_result())),
-    class = "installation_results", elapsed = Sys.time() - start)
+  cat(glue("
+      {length(filenames)} packages installed in {pretty_dt(Sys.time() - start)}.
+      "), sep = "\n")
 }
 
 remove_spaces <- function(x) {
@@ -168,4 +152,29 @@ is_binary_package <- function(filename) {
     verify_binary(filename)
     TRUE
   }, error = function(e) FALSE)
+}
+
+new_install_packages_process <-  function(file, lib, lock) {
+  callr::r_bg(
+    args = list(
+      filenames = file, lib = lib, lock = lock, num_workers = 1,
+      crayon.enabled = getOption("crayon.enabled"),
+      crayon.colors = getOption("crayon.colors")),
+
+    function(filenames, lib, lock, num_workers, crayon.enabled, crayon.colors) {
+      options("crayon.enabled" = crayon.enabled, "crayon.colors" = crayon.colors)
+      pkginstall::install_packages(filenames, lib = lib, lock = lock, num_workers = num_workers)
+    })
+}
+
+get_processes <- function(filenames, processes, num_workers, lib, lock) {
+  done <- map_lgl(processes, function(x) !x$is_alive() && !x$is_incomplete_output() && !x$is_incomplete_error())
+  processes <- processes[!done]
+
+  while (length(filenames) > 0 && length(processes) < num_workers) {
+    processes[[length(processes) + 1]] <- new_install_packages_process(filenames[[1]], lib, lock)
+    filenames <- filenames[-1]
+  }
+
+  return(list(filenames, processes))
 }

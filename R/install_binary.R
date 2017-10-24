@@ -18,8 +18,8 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
   pkg_name <- desc$get("Package")
 
   if (is_loaded(pkg_name)) {
-    abort(type = "runtime_error",
-     "Package {pkg_name} is already loaded and cannot be installed.
+    warn(type = "runtime_error",
+     "Package {pkg_name} is already loaded, installing may cause problems.
       Use `pkgload::unload({pkg_name})` to unload it.",
      package = pkg_name)
   }

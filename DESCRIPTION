@@ -23,7 +23,8 @@ Imports:
     tibble,
     withr,
     progress,
-    zeallot
+    zeallot,
+    pkgdepends
 Suggests: 
     callr,
     covr,
@@ -38,5 +39,5 @@ Remotes: jimhester/archive,
     r-lib/callr,
     r-lib/pkgbuild,
     r-lib/desc,
-    r-lib/progress#53
+    r-lib/progress
 RoxygenNote: 6.0.1

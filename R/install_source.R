@@ -52,7 +52,7 @@ install_source <- function(path, lib = .libPaths()[[1L]],
   tmp_dir <- create_temp_dir(tmpdir = lib_cache)
   on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
 
-  with_handlers(pkgbuild::build(path, tmp_dir, binary = TRUE, quiet = quiet, ...),
+  with_handlers(pkgbuild::build(path, tmp_dir, binary = TRUE, quiet = quiet, args = glue("--library={lib}"), ...),
     system_command_error = exiting(handle_pkgbuild_errors))
 
   built_files <- list.files(tmp_dir, full.names = TRUE)

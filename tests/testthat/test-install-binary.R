@@ -20,9 +20,9 @@ test_that("install_binary", {
 
   expect_equal(foo::foo(), NULL)
 
-  expect_error(
-    install_binary(pkg, lib = libpath),
-    "Package '.*' is already loaded and cannot be installed[.]")
+  #expect_error(
+    #install_binary(pkg, lib = libpath),
+    #"Package '.*' is already loaded and cannot be installed[.]")
 })
 
 test_that("install_binary works for simultaneous installs", {

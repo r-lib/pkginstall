@@ -47,7 +47,7 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]], plan = get_inst
     show_after = 0
   )
 
-  if (num_workers == 1) {
+  if (is.null(plan)) {
     res <- lapply(filenames, function(file) {
       bar$tick(0, tokens = list(packages = get_pkg_name(file)))
       format_message <- inplace(function(x) bar$message(format(x)))
@@ -211,7 +211,6 @@ get_processes <- function(plan, processes, results, num_workers, lib, lock) {
       ready <- which(lengths(plan$dependencies) == 0)
     } else {
       i <- ready[[1]]
-      str(plan$package[[i]])
       processes[[length(processes) + 1]] <- new_install_packages_process(plan$file[[i]], lib, lock)
       plan <- plan[-1 * i, ]
       ready <- ready[-1]

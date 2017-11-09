@@ -4,6 +4,7 @@
 #' directory, source tarball or binary package.
 #' @inheritParams install_binary
 #' @inheritParams install_source
+#' @keywords internal
 install_package <- function(filename, lib = .libPaths()[[1L]],
   lock = getOption("install.lock", TRUE), ...) {
   if (is_binary_package(filename)) {
@@ -122,7 +123,7 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]], plan = get_inst
   }
   bar$terminate()
 
-  structure(results, class = "installation_results", elapsed = Sys.time() - start)
+  structure(unlist(results, recursive = FALSE), class = "installation_results", elapsed = Sys.time() - start)
 }
 
 remove_spaces <- function(x) {
@@ -157,14 +158,14 @@ format.pkginstall_begin <- function(x, ...) {
 #' @importFrom clisymbols symbol
 #' @export
 print.installation_results <- function(x, ...) {
-  time <- cyan(pretty_dt(attr(x, 'elapsed')))
+  time <- cyan("(", pretty_dt(attr(x, 'elapsed')), ")", sep = "")
   if (length(x) > 1) {
     cat(glue("
-        {sum(map_int(x, length))} packages installed in {time}.
+        Installed {blue}{sum(map_int(x, length))}{reset} packages {time}.
         "))
   } else {
     cat(glue("
-        {blue}{names(x)}{reset} installed in {time} at {single_quote(x)}.
+        Installed {blue}{basename(names(x))}{reset} {time}.
         "))
   }
   invisible(x)

@@ -14,6 +14,8 @@ directories, source tarballs or binary packages.}
 
 \item{lib}{library to install packages into}
 
+\item{plan}{The installation plan from `pkgdepends::remote`}
+
 \item{lock}{If any value but `FALSE`, use per-package locking when
 installing. It defaults to using `getOption("install.lock")` for
 compatibility with `utils::install.packages()`.}
@@ -21,8 +23,6 @@ compatibility with `utils::install.packages()`.}
 \item{num_workers}{Number of parallel workers to use}
 
 \item{progress}{show a progress bar of installation progress.}
-
-\item{p5an}{The installation plan from `pkgdepends::remote`}
 }
 \description{
 Install multiple local packages

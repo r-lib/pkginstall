@@ -20,7 +20,7 @@ install_package <- function(filename, lib = .libPaths()[[1L]],
 #' @inheritParams install_binary
 #' @param num_workers Number of parallel workers to use
 #' @param progress show a progress bar of installation progress.
-#' @param p5an The installation plan from `pkgdepends::remote`
+#' @param plan The installation plan from `pkgdepends::remote`
 #' @importFrom rlang with_handlers exiting inplace
 #' @importFrom processx poll
 #' @importFrom tibble data_frame

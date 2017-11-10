@@ -23,7 +23,6 @@ Imports:
     tibble,
     withr,
     progress,
-    zeallot,
     pkgdepends
 Suggests: 
     callr,

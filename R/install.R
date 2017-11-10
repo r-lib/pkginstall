@@ -23,7 +23,6 @@ install_package <- function(filename, lib = .libPaths()[[1L]],
 #' @param p5an The installation plan from `pkgdepends::remote`
 #' @importFrom rlang with_handlers exiting inplace
 #' @importFrom processx poll
-#' @importFrom zeallot %<-%
 #' @importFrom tibble data_frame
 #' @export
 install_packages <- function(filenames, lib = .libPaths()[[1L]], plan = get_install_plan(filenames, lib),
@@ -50,7 +49,6 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]], plan = get_inst
 
   if (is.null(plan)) {
     res <- lapply(filenames, function(file) {
-      bar$tick(0, tokens = list(packages = get_pkg_name(file)))
       format_message <- inplace(function(x) bar$message(format(x)))
       installed_path <- with_handlers(
         pkginstall_installed = format_message,
@@ -60,10 +58,10 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]], plan = get_inst
           name <- basename(e$package %||% e$path %||% file)
           bar$message(glue("{red_cross()} Failed {name}"))
           stop(e)
-        }),
-
-        install_package(file, lib = lib, lock = lock)
-      )
+        }), {
+          bar$tick(0, tokens = list(packages = get_pkg_name(file)))
+          install_package(file, lib = lib, lock = lock)
+        })
 
       bar$tick(1, tokens = list(packages = get_pkg_name(file)))
       installed_path
@@ -82,48 +80,108 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]], plan = get_inst
   update_progress(0)
 
   # Currently assumes the order of installation is not important
-  c(plan, processes, results) %<-% get_processes(plan, processes = list(), results = list(), num_workers, lib, lock)
-  while(length(processes) > 0) {
-    res <- poll(processes, -1)
-    output_ready <- vapply(res, function(x) any(x == "ready"), logical(1))
-    for (i in which(output_ready)) {
-      error_lines <- processes[[i]]$read_error_lines()
-      output_lines <- processes[[i]]$read_output_lines()
-      output_lines <- remove_spaces(output_lines)
-      if (length(lines) > 0) {
-        is_running <- grepl("^Building", strip_style(output_lines))
-        running <- union(running, sub("^Building ", "", strip_style(output_lines[is_running])))
-        finished <- output_lines[!is_running]
+  events <- get_events(list(plan = plan, processes = list(), results = list()), num_workers, lib, lock, bar)
+  while(running_processes(events)) {
+    for (output in get_output(events)) {
+      is_running <- grepl("^Building", strip_style(output$output))
+      running <- union(running, sub("^Building ", "", strip_style(output$output[is_running])))
+      finished <- output$output[!is_running]
 
-        if (length(finished) > 0 && nzchar(finished)) {
+      if (length(finished) > 0 && nzchar(finished)) {
 
-          # remove installed and failed from running
-          installed <- strip_style(finished)[grepl("^. Installed ", strip_style(finished))]
-          installed <- sub(". Installed ([^[:space:]]+).*", "\\1", installed)
+        # remove installed from running
+        installed <- strip_style(finished)[grepl("^. Installed ", strip_style(finished))]
+        installed <- sub(". Installed ([^[:space:]]+).*", "\\1", installed)
 
-          failed <- strip_style(finished)[grepl("^. Failed ", strip_style(finished))]
-          failed <- sub(". Failed ([^[:space:]]+).*", "\\1", failed)
-          if (length(failed)) {
-            bar$terminate()
-            error_lines <- c(error_lines, processes[[i]]$read_all_error_lines())
-            output_lines <- c(output_lines, processes[[i]]$read_all_output_lines())
-            lapply(processes, function(x) x$kill(tools::SIGINT))
-            stop(collapse(c(error_lines, output_lines), sep = "\n"), call. = FALSE)
-          }
-          running <- setdiff(running, installed)
-          bar$message(finished)
-          update_progress(length(installed))
-        }
-        if (!bar$finished && length(running)) {
-          update_progress(0)
-        }
+        running <- setdiff(running, installed)
+        bar$message(finished)
+        update_progress(length(installed))
+      }
+      if (!bar$finished && length(running)) {
+        update_progress(0)
       }
     }
-    c(plan, processes, results) %<-% get_processes(plan, processes, results, num_workers, lib, lock)
+    events <- get_events(events, num_workers, lib, lock, bar)
   }
   bar$terminate()
 
-  structure(unlist(results, recursive = FALSE), class = "installation_results", elapsed = Sys.time() - start)
+  structure(unlist(events$results, recursive = FALSE), class = "installation_results", elapsed = Sys.time() - start)
+}
+
+get_events <- function(events, num_workers, lib, lock, bar) {
+  done <- map_lgl(events$processes, function(x) !x$is_alive() && !x$is_incomplete_output() && !x$is_incomplete_error())
+  failed <- map_lgl(events$processes, function(x) !x$is_alive() && x$get_exit_status() != 0)
+  if (any(failed)) {
+    kill_all_processes(events$processes)
+    bar$terminate()
+    events$processes$get_result[which(failed)[[1]]]
+  }
+  results <- append(events$results, lapply(events$processes[done], function(x) x$get_result()))
+  processes <- events$processes[!done]
+  plan <- events$plan
+
+  # Removed installed packages from dependencies
+  installed <- unlist(lapply(results, function(x) basename(unlist(x))))
+  plan$dependencies <- lapply(plan$dependencies, setdiff, installed)
+  ready <- which(plan$binary | lengths(plan$dependencies) == 0)
+
+  i <- 1
+  while (i <= length(ready) && length(processes) < num_workers) {
+    # Distribute all binary packages to a single worker
+    # TODO: maybe distribute them to all workers?
+    is_binary <- plan$binary
+    if (any(is_binary)) {
+      processes[[length(processes) + 1]] <- new_install_packages_process(plan$file[is_binary], lib, lock)
+      binary_pkgs <- plan$package[is_binary]
+      plan <- plan[!is_binary, ]
+      ready <- which(lengths(plan$dependencies) == 0)
+    } else {
+      processes[[length(processes) + 1]] <- new_install_packages_process(plan$file[[ready[[i]]]], lib, lock)
+      i <- i + 1
+    }
+  }
+  plan <- remove_rows(plan, ready[seq_len(i - 1)])
+
+  list(plan = plan, processes = processes, results = results)
+}
+
+
+#' @importFrom pkgdepends remotes
+get_install_plan <- function(filenames, library) {
+  r <- remotes$new(glue("local::{filenames}"), library = library)
+  r$solve()
+  r$download_solution()
+  plan <- r$get_install_plan()
+
+  installed <- plan$type == "installed"
+
+  # Remove installed dependencies from the dependency lists.
+  plan$dependencies <- lapply(plan$dependencies, setdiff, plan$package[installed])
+
+  # Return uninstalled packages
+  plan[!installed, ]
+}
+
+get_output <- function(x) {
+  res <- poll(x$processes, -1)
+  idx <- which(vapply(res, function(x) any(x == "ready"), logical(1)))
+  lapply(idx,
+    function(i) {
+      list(
+        output = remove_spaces(x$processes[[i]]$read_output_lines()),
+        error = x$processes[[i]]$read_error_lines(),
+        index = i)
+    })
+}
+
+running_processes <- function(x) {
+  length(x$processes) > 0
+}
+
+kill_all_processes <- function(events) {
+  for (proc in events$processes) {
+    proc$kill(tools::SIGINT)
+  }
 }
 
 remove_spaces <- function(x) {
@@ -191,41 +249,9 @@ new_install_packages_process <-  function(file, lib, lock) {
     })
 }
 
-get_processes <- function(plan, processes, results, num_workers, lib, lock) {
-  done <- map_lgl(processes, function(x) !x$is_alive() && !x$is_incomplete_output() && !x$is_incomplete_error())
-  results <- append(results, lapply(processes[done], function(x) x$get_result()))
-  processes <- processes[!done]
-
-  # Removed installed packages from dependencies
-  installed <- unlist(lapply(results, function(x) basename(unlist(x))))
-  plan$dependencies <- lapply(plan$dependencies, setdiff, installed)
-  ready <- which(plan$binary | lengths(plan$dependencies) == 0)
-
-  while (length(ready) && length(processes) < num_workers) {
-    # Distribute all binary packages to a single worker
-    # TODO: maybe distribute them to all workers?
-    is_binary <- plan$binary
-    if (any(is_binary)) {
-      processes[[length(processes) + 1]] <- new_install_packages_process(plan$file[is_binary], lib, lock)
-      binary_pkgs <- plan$package[is_binary]
-      plan <- plan[!is_binary, ]
-      ready <- which(lengths(plan$dependencies) == 0)
-    } else {
-      i <- ready[[1]]
-      processes[[length(processes) + 1]] <- new_install_packages_process(plan$file[[i]], lib, lock)
-      plan <- plan[-1 * i, ]
-      ready <- ready[-1]
-    }
+remove_rows <- function(x, i) {
+  if (length(i) == 0) {
+    return(x)
   }
-
-  list(plan, processes, results)
-}
-
-#' @importFrom pkgdepends remotes
-get_install_plan <- function(filenames, library) {
-  r <- remotes$new(glue("local::{filenames}"), library = library)
-  r$solve()
-  r$download_solution()
-  plan <- r$get_install_plan()
-  plan[plan$type != "installed", ]
+  x[-1 * i, ]
 }

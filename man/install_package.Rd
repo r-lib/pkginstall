@@ -22,3 +22,4 @@ compatibility with `utils::install.packages()`.}
 \description{
 Install a local R package
 }
+\keyword{internal}

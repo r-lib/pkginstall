@@ -5,3 +5,4 @@
 ^codecov\.yml$
 ^appveyor\.yml$
 ^tests/testthat/foo/src/.*o$
+^script\.R$

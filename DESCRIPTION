@@ -39,6 +39,6 @@ Remotes: jimhester/archive,
     r-lib/pkgbuild,
     r-lib/desc,
     r-lib/progress,
-    r-lib/pkgdepends
+    r-lib/pkgdepends,
     r-lib/rlang
 RoxygenNote: 6.0.1

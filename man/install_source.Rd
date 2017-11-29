@@ -5,7 +5,8 @@
 \title{Install a source package}
 \usage{
 install_source(path, lib = .libPaths()[[1L]],
-  lock = getOption("install.lock", TRUE), quiet = TRUE, ...)
+  lock = getOption("install.lock", TRUE), quiet = TRUE, metadata = NULL,
+  ...)
 }
 \arguments{
 \item{path}{Path to a package, or within a package.}
@@ -17,6 +18,9 @@ installing. It defaults to using `getOption("install.lock")` for
 compatibility with `utils::install.packages()`.}
 
 \item{quiet}{if \code{TRUE} suppresses output from this function.}
+
+\item{metadata}{Named character vector of metadata entries to be added
+to the \code{DESCRIPTION} after installation.}
 
 \item{...}{Additional arguments passed to [pkgbuild::build].}
 }

@@ -6,11 +6,11 @@
 #' @inheritParams install_source
 #' @keywords internal
 install_package <- function(filename, lib = .libPaths()[[1L]],
-  lock = getOption("install.lock", TRUE), ...) {
+  lock = getOption("install.lock", TRUE), metadata = NULL, ...) {
   if (is_binary_package(filename)) {
-    return(install_binary(filename, lib, lock))
+    return(install_binary(filename, lib, lock, metadata = metadata))
   }
-  install_source(filename, lib, lock)
+  install_source(filename, lib, lock, metadata = metadata)
 }
 
 #' Install multiple local packages
@@ -21,12 +21,15 @@ install_package <- function(filename, lib = .libPaths()[[1L]],
 #' @param num_workers Number of parallel workers to use
 #' @param progress show a progress bar of installation progress.
 #' @param plan The installation plan from `pkgdepends::remote`
+#' @param metadata for internal use only
 #' @importFrom rlang with_handlers exiting inplace
 #' @importFrom processx poll
 #' @importFrom tibble data_frame
 #' @export
-install_packages <- function(filenames, lib = .libPaths()[[1L]], plan = get_install_plan(filenames, lib),
-  lock = getOption("install.lock", TRUE), num_workers = 1, progress = interactive()) {
+install_packages <- function(
+  filenames, lib = .libPaths()[[1L]], plan = get_install_plan(filenames, lib),
+  lock = getOption("install.lock", TRUE), metadata = NULL, num_workers = 1,
+  progress = interactive()) {
 
   start <- Sys.time()
 
@@ -48,7 +51,9 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]], plan = get_inst
   )
 
   if (is.null(plan)) {
-    res <- lapply(filenames, function(file) {
+    res <- lapply(seq_along(filenames), function(idx) {
+      file <- filenames[idx]
+      meta <- metadata[[idx]]
       format_message <- inplace(function(x) bar$message(format(x)))
       installed_path <- with_handlers(
         pkginstall_installed = format_message,
@@ -60,7 +65,7 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]], plan = get_inst
           stop(e)
         }), {
           bar$tick(0, tokens = list(packages = get_pkg_name(file)))
-          install_package(file, lib = lib, lock = lock)
+          install_package(file, lib = lib, lock = lock, metadata = meta)
         })
 
       bar$tick(1, tokens = list(packages = get_pkg_name(file)))
@@ -131,12 +136,14 @@ get_events <- function(events, num_workers, lib, lock, bar) {
     # TODO: maybe distribute them to all workers?
     is_binary <- plan$binary
     if (any(is_binary)) {
-      processes[[length(processes) + 1]] <- new_install_packages_process(plan$file[is_binary], lib, lock)
+      processes[[length(processes) + 1]] <- new_install_packages_process(
+        plan$file[is_binary], plan$metadata[is_binary], lib, lock)
       binary_pkgs <- plan$package[is_binary]
       plan <- plan[!is_binary, ]
       ready <- which(lengths(plan$dependencies) == 0)
     } else {
-      processes[[length(processes) + 1]] <- new_install_packages_process(plan$file[[ready[[i]]]], lib, lock)
+      processes[[length(processes) + 1]] <- new_install_packages_process(
+        plan$file[[ready[[i]]]], plan$metadata[ready[i]], lib, lock)
       i <- i + 1
     }
   }
@@ -236,16 +243,20 @@ is_binary_package <- function(filename) {
   }, error = function(e) FALSE)
 }
 
-new_install_packages_process <-  function(file, lib, lock) {
+new_install_packages_process <-  function(file, metadata, lib, lock) {
   callr::r_bg(
     args = list(
-      filenames = file, lib = lib, lock = lock, num_workers = 1,
+      filenames = file, metadata = metadata, lib = lib, lock = lock,
+      num_workers = 1,
       crayon.enabled = getOption("crayon.enabled"),
       crayon.colors = getOption("crayon.colors")),
 
-    function(filenames, lib, lock, num_workers, crayon.enabled, crayon.colors) {
+    function(filenames, metadata, lib, lock, num_workers, crayon.enabled,
+             crayon.colors) {
       options("crayon.enabled" = crayon.enabled, "crayon.colors" = crayon.colors)
-      pkginstall::install_packages(filenames, lib = lib, lock = lock, num_workers = num_workers, plan = NULL)
+      pkginstall::install_packages(
+        filenames, metadata = metadata, lib = lib, lock = lock,
+        num_workers = num_workers, plan = NULL)
     })
 }
 

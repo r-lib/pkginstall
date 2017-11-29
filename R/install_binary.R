@@ -5,12 +5,14 @@
 #' @param lock If any value but `FALSE`, use per-package locking when
 #'   installing. It defaults to using `getOption("install.lock")` for
 #'   compatibility with `utils::install.packages()`.
+#' @param metadata Named character vector of metadata entries to be added
+#'   to the \code{DESCRIPTION} after installation.
 #' @importFrom archive archive archive_extract
 #' @importFrom filelock lock unlock
 #' @importFrom rlang cnd cnd_signal
 #' @export
 install_binary <- function(filename, lib = .libPaths()[[1L]],
-  lock = getOption("install.lock", TRUE)) {
+  lock = getOption("install.lock", TRUE), metadata = NULL) {
 
   now <- Sys.time()
 
@@ -34,6 +36,7 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
   }
 
   archive_extract(filename, dir = lib_cache)
+  add_metadata(file.path(lib_cache, pkg_name), metadata)
 
   installed_path <- file.path(lib, pkg_name)
   if (file.exists(installed_path)) {
@@ -98,4 +101,32 @@ get_pkg_name <- function(tarball) {
       ")
   }
   pkg
+}
+
+add_metadata <- function(pkg_path, metadata) {
+  if (!length(metadata)) return()
+
+  ## During installation, the DESCRIPTION file is read and an package.rds
+  ## file created with most of the information from the DESCRIPTION file.
+  ## Functions that read package metadata may use either the DESCRIPTION
+  ## file or the package.rds file, therefore we attempt to modify both of
+  ## them, and return an error if neither one exists.
+
+  source_desc <- file.path(pkg_path, "DESCRIPTION")
+  binary_desc <- file.path(pkg_path, "Meta", "package.rds")
+  if (file.exists(source_desc)) {
+    do.call(desc::desc_set, c(as.list(metadata), list(file = source_desc)))
+  }
+
+  if (file.exists(binary_desc)) {
+    pkg_desc <- base::readRDS(binary_desc)
+    desc <- as.list(pkg_desc$DESCRIPTION)
+    desc <- modifyList(desc, as.list(metadata))
+    pkg_desc$DESCRIPTION <- stats::setNames(as.character(desc), names(desc))
+    base::saveRDS(pkg_desc, binary_desc)
+  }
+
+  if (!file.exists(source_desc) && !file.exists(binary_desc)) {
+    stop("No DESCRIPTION found!", call. = FALSE)
+  }
 }

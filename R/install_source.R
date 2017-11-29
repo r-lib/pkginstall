@@ -5,7 +5,8 @@
 #' @param ... Additional arguments passed to [pkgbuild::build].
 #' @export
 install_source <- function(path, lib = .libPaths()[[1L]],
-                               lock = getOption("install.lock", TRUE), quiet = TRUE, ...) {
+                           lock = getOption("install.lock", TRUE), quiet = TRUE,
+                           metadata = NULL, ...) {
 
   now <- Sys.time()
 
@@ -39,7 +40,8 @@ install_source <- function(path, lib = .libPaths()[[1L]],
           cond$package <- pkg_name
           cnd_signal(cond)
         }),
-        install_source(file.path(tmp_path, pkg_name), lib, lock, quiet, ...)
+        install_source(file.path(tmp_path, pkg_name), lib, lock, quiet,
+                       metadata = metadata, ...)
       )
     )
   }
@@ -63,7 +65,7 @@ install_source <- function(path, lib = .libPaths()[[1L]],
     cnd("pkginstall_built",
       package = pkg_name, path = tmp_dir, time = Sys.time() - now))
 
-  install_binary(built_files, lib, lock = lock)
+  install_binary(built_files, lib, lock = lock, metadata = metadata)
 }
 
 # pkgbuild puts the stderr output in `e$stderr`, and R CMD INSTALL / R CMD build

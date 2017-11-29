@@ -6,7 +6,7 @@
 \usage{
 install_packages(filenames, lib = .libPaths()[[1L]],
   plan = get_install_plan(filenames, lib), lock = getOption("install.lock",
-  TRUE), num_workers = 1, progress = interactive())
+  TRUE), metadata = NULL, num_workers = 1, progress = interactive())
 }
 \arguments{
 \item{filenames}{filenames of packages to install. Can be source
@@ -19,6 +19,8 @@ directories, source tarballs or binary packages.}
 \item{lock}{If any value but `FALSE`, use per-package locking when
 installing. It defaults to using `getOption("install.lock")` for
 compatibility with `utils::install.packages()`.}
+
+\item{metadata}{for internal use only}
 
 \item{num_workers}{Number of parallel workers to use}
 

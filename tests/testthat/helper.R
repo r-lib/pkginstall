@@ -15,14 +15,14 @@ local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent
     })
   }
 
-  filename <- file.path(d, glue("{pkgname}.{extension}"))
-  archive_write_dir(filename, d)
+  filename <- file.path(d, glue::glue("{pkgname}.{extension}"))
+  archive::archive_write_dir(filename, d)
 
   # We do not want to unlink files if we are calling this from the R console,
   # useful when debugging.
   is_globalenv <- identical(envir, globalenv())
   if (!is_globalenv) {
-    defer(unlink(d, recursive = TRUE), envir = envir)
+    withr::defer(unlink(d, recursive = TRUE), envir = envir)
   }
   filename
 }
@@ -30,10 +30,10 @@ local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent
 binary_test_package <- function(name) {
 
   binary <- switch(sysname(),
-    windows = glue("{name}.zip"),
-    linux = glue("{name}_R_x86_64-pc-linux-gnu.tar.gz"),
-    mac = glue("{name}.tgz"),
-    skip(glue("Cannot test on {sysname()}"))
+    windows = glue::glue("{name}.zip"),
+    linux = glue::glue("{name}_R_x86_64-pc-linux-gnu.tar.gz"),
+    mac = glue::glue("{name}.tgz"),
+    skip(glue::glue("Cannot test on {sysname()}"))
     )
   if (!file.exists(binary)) {
     pkgbuild::build(sub("_.*$", "", name), binary = TRUE, quiet = TRUE)

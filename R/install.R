@@ -133,7 +133,6 @@ get_events <- function(events, num_workers, lib, lock, bar) {
   i <- 1
   while (i <= length(ready) && length(processes) < num_workers) {
     # Distribute all binary packages to a single worker
-    # TODO: maybe distribute them to all workers?
     is_binary <- plan$binary
     if (any(is_binary)) {
       processes[[length(processes) + 1]] <- new_install_packages_process(

@@ -103,6 +103,7 @@ get_pkg_name <- function(tarball) {
   pkg
 }
 
+#' @importFrom utils modifyList
 add_metadata <- function(pkg_path, metadata) {
   if (!length(metadata)) return()
 

@@ -4,7 +4,7 @@ archive_files <- function(path) {
 
   path <- normalizePath(path)
 
-  if (windows_archive(path)) {
+  if (is_windows_archive(path)) {
     return(unzip(path, list = TRUE, unzip = "internal")$Name)
   }
 
@@ -12,13 +12,13 @@ archive_files <- function(path) {
 }
 
 archive_extract <- function(path, dir) {
-  if (windows_archive(path)) {
+  if (is_windows_archive(path)) {
     return(unzip(path, exdir = dir, unzip = "internal"))
   }
   untar(path, exdir = dir, tar = "internal")
 }
 
-windows_archive <- function(path) {
+is_windows_archive <- function(path) {
   grepl("[.]zip$", basename(path))
 }
 
@@ -26,7 +26,7 @@ archive_read <- function(path, file, dir) {
   dir <- create_temp_dir()
   on.exit(unlink(dir, recursive = TRUE))
   out_path <- file.path(dir, file)
-  if (windows_archive(path)) {
+  if (is_windows_archive(path)) {
     unzip(path, file, exdir = dir, unzip = "internal")
   } else {
     untar(path, file, exdir = dir, tar = "internal")
@@ -42,7 +42,7 @@ archive_write_dir <- function(archive, dir, ..., recursive = TRUE, full.names = 
   old <- setwd(dir)
   on.exit(setwd(old))
   files <- dir(dir, ..., recursive = recursive, full.names = full.names)
-  if (windows_archive(archive)) {
+  if (is_windows_archive(archive)) {
     zip(archive, files)
   } else {
     (fix_tar(tar))(archive, files, tar = "internal")

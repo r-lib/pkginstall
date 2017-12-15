@@ -45,7 +45,7 @@ test_that("archive CRUD", {
   expect_equal(archive_read(zip_file, "dir/foo", tmp), c("foo", "bar"))
 })
 
-test_that("windows_archive", {
+test_that("is_windows_archive", {
   good <- c("foo/bar.zip", "bar.zip", "c:/foo/bar.zip", "c:\\foo.zip",
             "c:\\foo\\bar.zip", "\\\\share\\dir\\bar.zip")
 
@@ -53,6 +53,6 @@ test_that("windows_archive", {
            "c:/foo/bar.tar.gz", "c:\\foo.tar.gz", "c:\\foo\\bar.zipp",
            "\\\\share\\dir\\bar.zi")
 
-  for (x in good) expect_true (windows_archive(x))
-  for (x in bad)  expect_false(windows_archive(x))
+  for (x in good) expect_true (is_windows_archive(x))
+  for (x in bad)  expect_false(is_windows_archive(x))
 })

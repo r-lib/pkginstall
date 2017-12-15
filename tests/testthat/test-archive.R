@@ -35,14 +35,14 @@ test_that("archive CRUD", {
   expect_true(file.exists(file.path(tmp3, "dir", "foo")))
 
   unlink(tmp, recursive = TRUE)
-  expect_equal(archive_read(tar_file, "foobar", tmp), "foobar")
+  expect_equal(archive_read(tar_file, "foobar"), "foobar")
   unlink(tmp, recursive = TRUE)
-  expect_equal(archive_read(tar_file, "dir/foo", tmp), c("foo", "bar"))
+  expect_equal(archive_read(tar_file, "dir/foo"), c("foo", "bar"))
 
   unlink(tmp, recursive = TRUE)
-  expect_equal(archive_read(zip_file, "foobar", tmp), "foobar")
+  expect_equal(archive_read(zip_file, "foobar"), "foobar")
   unlink(tmp, recursive = TRUE)
-  expect_equal(archive_read(zip_file, "dir/foo", tmp), c("foo", "bar"))
+  expect_equal(archive_read(zip_file, "dir/foo"), c("foo", "bar"))
 })
 
 test_that("is_windows_archive", {

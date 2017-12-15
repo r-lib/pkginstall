@@ -22,7 +22,7 @@ is_windows_archive <- function(path) {
   grepl("[.]zip$", basename(path))
 }
 
-archive_read <- function(path, file, dir) {
+archive_read <- function(path, file) {
   dir <- create_temp_dir()
   on.exit(unlink(dir, recursive = TRUE))
   out_path <- file.path(dir, file)

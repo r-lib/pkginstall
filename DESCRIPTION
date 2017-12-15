@@ -22,7 +22,8 @@ Imports:
     tibble,
     withr,
     progress,
-    pkgdepends
+    pkgdepends,
+    zip
 Suggests: 
     callr,
     covr,

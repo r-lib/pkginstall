@@ -9,6 +9,7 @@ test_that("archive CRUD", {
   cat("foobar\n", file = file.path(tmp, "foobar"))
   dir.create(file.path(tmp, "dir"))
   cat("foo\nbar\n", file = file.path(tmp, "dir", "foo"))
+  dir.create(file.path(tmp, "empty"))
 
   tar_file <- tempfile(fileext = ".tar.gz")
   zip_file <- sub("[.]tar[.]gz$", ".zip", tar_file)

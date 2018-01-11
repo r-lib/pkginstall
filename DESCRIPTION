@@ -23,6 +23,7 @@ Imports:
     withr,
     progress,
     pkgdepends,
+    tar,
     zip
 Suggests: 
     callr,
@@ -40,5 +41,6 @@ Remotes:
     r-lib/pkgbuild,
     r-lib/desc,
     r-lib/progress,
-    r-lib/pkgdepends
+    r-lib/pkgdepends,
+    r-lib/tar
 RoxygenNote: 6.0.1

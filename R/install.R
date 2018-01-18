@@ -2,15 +2,20 @@
 #'
 #' @param filename filename of package to install. Can be a source
 #' directory, source tarball or binary package.
+#' @param vignettes whether to (re)build the vignettes of the packages.
+#' It is ignored for binary packages.
 #' @inheritParams install_binary
 #' @inheritParams install_source
 #' @keywords internal
 install_package <- function(filename, lib = .libPaths()[[1L]],
-  lock = getOption("install.lock", TRUE), metadata = NULL, ...) {
+  lock = getOption("install.lock", TRUE), metadata = NULL,
+  vignettes = TRUE, ...) {
+
   if (is_binary_package(filename)) {
     return(install_binary(filename, lib, lock, metadata = metadata))
   }
-  install_source(filename, lib, lock, metadata = metadata)
+  install_source(filename, lib, lock, metadata = metadata,
+                 vignettes = vignettes)
 }
 
 #' Install multiple local packages
@@ -22,14 +27,15 @@ install_package <- function(filename, lib = .libPaths()[[1L]],
 #' @param progress show a progress bar of installation progress.
 #' @param plan The installation plan from `pkgdepends::remote`
 #' @param metadata for internal use only
+#' @param vignettes whether to (re)build the vignettes of the packages
 #' @importFrom rlang with_handlers exiting inplace
 #' @importFrom processx poll
 #' @importFrom tibble data_frame
 #' @export
 install_packages <- function(
   filenames, lib = .libPaths()[[1L]], plan = get_install_plan(filenames, lib),
-  lock = getOption("install.lock", TRUE), metadata = NULL, num_workers = 1,
-  progress = interactive()) {
+  lock = getOption("install.lock", TRUE), metadata = NULL, vignettes = TRUE,
+  num_workers = 1, progress = interactive()) {
 
   start <- Sys.time()
 
@@ -65,7 +71,8 @@ install_packages <- function(
           stop(e)
         }), {
           bar$tick(0, tokens = list(packages = get_pkg_name(file)))
-          install_package(file, lib = lib, lock = lock, metadata = meta)
+          install_package(file, lib = lib, lock = lock, metadata = meta,
+                          vignettes = vignettes)
         })
 
       bar$tick(1, tokens = list(packages = get_pkg_name(file)))
@@ -137,13 +144,15 @@ get_events <- function(events, num_workers, lib, lock, bar) {
     is_binary <- plan$binary
     if (any(is_binary)) {
       processes[[length(processes) + 1]] <- new_install_packages_process(
-        plan$file[is_binary], plan$metadata[is_binary], lib, lock)
+        plan$file[is_binary], plan$metadata[is_binary],
+        plan$vignettes[is_binary], lib, lock)
       binary_pkgs <- plan$package[is_binary]
       plan <- plan[!is_binary, ]
       ready <- which(lengths(plan$dependencies) == 0)
     } else {
       processes[[length(processes) + 1]] <- new_install_packages_process(
-        plan$file[[ready[[i]]]], plan$metadata[ready[i]], lib, lock)
+        plan$file[[ready[[i]]]], plan$metadata[ready[i]],
+        plan$vignettes[ready[i]], lib, lock)
       i <- i + 1
     }
   }
@@ -243,20 +252,21 @@ is_binary_package <- function(filename) {
   }, error = function(e) FALSE)
 }
 
-new_install_packages_process <-  function(file, metadata, lib, lock) {
+new_install_packages_process <-  function(file, metadata, vignettes, lib,
+                                          lock) {
   callr::r_bg(
     args = list(
-      filenames = file, metadata = metadata, lib = lib, lock = lock,
-      num_workers = 1,
+      filenames = file, metadata = metadata, vignettes = vignettes,
+      lib = lib, lock = lock, num_workers = 1,
       crayon.enabled = getOption("crayon.enabled"),
       crayon.colors = getOption("crayon.colors")),
 
-    function(filenames, metadata, lib, lock, num_workers, crayon.enabled,
-             crayon.colors) {
+    function(filenames, metadata, vignettes, lib, lock, num_workers,
+             crayon.enabled, crayon.colors) {
       options("crayon.enabled" = crayon.enabled, "crayon.colors" = crayon.colors)
       pkginstall::install_packages(
-        filenames, metadata = metadata, lib = lib, lock = lock,
-        num_workers = num_workers, plan = NULL)
+        filenames, metadata = metadata, vignettes = vignettes, lib = lib,
+        lock = lock, num_workers = num_workers, plan = NULL)
     })
 }
 

@@ -6,7 +6,7 @@
 \usage{
 install_source(path, lib = .libPaths()[[1L]],
   lock = getOption("install.lock", TRUE), quiet = TRUE, metadata = NULL,
-  ...)
+  vignettes = TRUE, ...)
 }
 \arguments{
 \item{path}{Path to a package, or within a package.}
@@ -21,6 +21,8 @@ compatibility with `utils::install.packages()`.}
 
 \item{metadata}{Named character vector of metadata entries to be added
 to the \code{DESCRIPTION} after installation.}
+
+\item{vignettes}{whether to (re)build the vignettes of the packages}
 
 \item{...}{Additional arguments passed to [pkgbuild::build].}
 }

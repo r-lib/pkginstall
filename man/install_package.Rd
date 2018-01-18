@@ -5,7 +5,8 @@
 \title{Install a local R package}
 \usage{
 install_package(filename, lib = .libPaths()[[1L]],
-  lock = getOption("install.lock", TRUE), metadata = NULL, ...)
+  lock = getOption("install.lock", TRUE), metadata = NULL,
+  vignettes = TRUE, ...)
 }
 \arguments{
 \item{filename}{filename of package to install. Can be a source
@@ -19,6 +20,9 @@ compatibility with `utils::install.packages()`.}
 
 \item{metadata}{Named character vector of metadata entries to be added
 to the \code{DESCRIPTION} after installation.}
+
+\item{vignettes}{whether to (re)build the vignettes of the packages.
+It is ignored for binary packages.}
 
 \item{...}{Additional arguments passed to [pkgbuild::build].}
 }

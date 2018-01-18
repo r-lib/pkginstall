@@ -2,11 +2,12 @@
 #'
 #' @inheritParams install_binary
 #' @inheritParams pkgbuild::build
+#' @param vignettes whether to (re)build the vignettes of the packages
 #' @param ... Additional arguments passed to [pkgbuild::build].
 #' @export
 install_source <- function(path, lib = .libPaths()[[1L]],
                            lock = getOption("install.lock", TRUE), quiet = TRUE,
-                           metadata = NULL, ...) {
+                           metadata = NULL, vignettes = TRUE, ...) {
 
   now <- Sys.time()
 
@@ -41,7 +42,7 @@ install_source <- function(path, lib = .libPaths()[[1L]],
           cnd_signal(cond)
         }),
         install_source(file.path(tmp_path, pkg_name), lib, lock, quiet,
-                       metadata = metadata, ...)
+                       metadata = metadata, vignettes = vignettes, ...)
       )
     )
   }
@@ -54,7 +55,9 @@ install_source <- function(path, lib = .libPaths()[[1L]],
   tmp_dir <- create_temp_dir(tmpdir = lib_cache)
   on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
 
-  with_handlers(pkgbuild::build(path, tmp_dir, binary = TRUE, quiet = quiet, args = glue("--library={lib}"), ...),
+  with_handlers(
+    pkgbuild::build(path, tmp_dir, binary = TRUE, vignettes = vignettes,
+                    quiet = quiet, args = glue("--library={lib}"), ...),
     system_command_error = exiting(handle_pkgbuild_errors))
 
   built_files <- list.files(tmp_dir, full.names = TRUE)

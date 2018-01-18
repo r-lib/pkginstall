@@ -48,9 +48,11 @@ test_that("install_packages metadata", {
   libpath <- create_temp_dir()
   on.exit(unlink(c(libpath, pkg), recursive = TRUE), add = TRUE)
 
-  plan <- get_install_plan(pkg, library = libpath)
-  plan$metadata[[1]] <- c("Foo" = "Bar", "Foobar" = "baz")
-  expect_error_free(install_packages(pkg, lib = libpath, plan = plan))
+  withr::with_options(list(pkg.progress.bar = FALSE), {
+    plan <- get_install_plan(pkg, library = libpath)
+    plan$metadata[[1]] <- c("Foo" = "Bar", "Foobar" = "baz")
+    expect_error_free(install_packages(pkg, lib = libpath, plan = plan))
+  })
 
   dsc <- desc::desc(file.path(libpath, "foo"))
   expect_equal(dsc$get("Foo")[[1]], "Bar")

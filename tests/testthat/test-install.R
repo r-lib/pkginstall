@@ -36,8 +36,11 @@ describe("install_packages", {
     unlink(pkg)
   })
 
-  expect_error_free(
-    install_packages("foo_0.0.0.9000.tar.gz", lib = libpath))
+  withr::with_options(
+    list(pkg.progress.bar = FALSE),
+    expect_error_free(
+      install_packages("foo_0.0.0.9000.tar.gz", lib = libpath))
+  )
 
   expect_error_free(
     library("foo", lib.loc = libpath))

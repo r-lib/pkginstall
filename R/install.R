@@ -258,8 +258,8 @@ new_install_packages_process <-  function(file, metadata, vignettes, lib,
     args = list(
       filenames = file, metadata = metadata, vignettes = vignettes,
       lib = lib, lock = lock, num_workers = 1,
-      crayon.enabled = getOption("crayon.enabled"),
-      crayon.colors = getOption("crayon.colors")),
+      crayon.enabled = crayon::has_color(),
+      crayon.colors = crayon::num_colors()),
 
     function(filenames, metadata, vignettes, lib, lock, num_workers,
              crayon.enabled, crayon.colors) {

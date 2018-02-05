@@ -24,7 +24,6 @@ install_package <- function(filename, lib = .libPaths()[[1L]],
 #' directories, source tarballs or binary packages.
 #' @inheritParams install_binary
 #' @param num_workers Number of parallel workers to use
-#' @param progress show a progress bar of installation progress.
 #' @param plan The installation plan from `pkgdepends::remote`
 #' @param metadata for internal use only
 #' @param vignettes whether to (re)build the vignettes of the packages
@@ -35,9 +34,11 @@ install_package <- function(filename, lib = .libPaths()[[1L]],
 install_packages <- function(
   filenames, lib = .libPaths()[[1L]], plan = get_install_plan(filenames, lib),
   lock = getOption("install.lock", TRUE), metadata = NULL, vignettes = TRUE,
-  num_workers = 1, progress = interactive()) {
+  num_workers = 1) {
 
   start <- Sys.time()
+
+  progress <- is_verbose()
 
   bar_fmt <- if (isTRUE(progress)) {
     collapse(sep = " | ", c(

@@ -6,8 +6,7 @@
 \usage{
 install_packages(filenames, lib = .libPaths()[[1L]],
   plan = get_install_plan(filenames, lib), lock = getOption("install.lock",
-  TRUE), metadata = NULL, vignettes = TRUE, num_workers = 1,
-  progress = interactive())
+  TRUE), metadata = NULL, vignettes = TRUE, num_workers = 1)
 }
 \arguments{
 \item{filenames}{filenames of packages to install. Can be source
@@ -26,8 +25,6 @@ compatibility with `utils::install.packages()`.}
 \item{vignettes}{whether to (re)build the vignettes of the packages}
 
 \item{num_workers}{Number of parallel workers to use}
-
-\item{progress}{show a progress bar of installation progress.}
 }
 \description{
 Install multiple local packages

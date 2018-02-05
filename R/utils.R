@@ -39,7 +39,6 @@ warn <- function(msg, type = NULL, ..., .envir = parent.frame()) {
       ))
 }
 
-#' @importFrom rlang %||%
 `%!in%` <- function(x, y) {
   !x %in% y
 }
@@ -93,3 +92,8 @@ map_chr <- get("map_chr", asNamespace("rlang"))
 map_int <- get("map_int", asNamespace("rlang"))
 
 lengths <- function(x) vapply(x, length, integer(1))
+
+#' @importFrom rlang %||%
+is_verbose <- function() {
+  getOption("pkg.show_progress") %||% interactive()
+}

@@ -37,7 +37,7 @@ describe("install_packages", {
   })
 
   withr::with_options(
-    list(pkg.progress.bar = FALSE),
+    list(pkg.show_progress = FALSE),
     expect_error_free(
       install_packages("foo_0.0.0.9000.tar.gz", lib = libpath))
   )

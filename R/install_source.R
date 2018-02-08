@@ -5,8 +5,7 @@
 #' @param vignettes whether to (re)build the vignettes of the packages
 #' @param ... Additional arguments passed to [pkgbuild::build].
 #' @export
-install_source <- function(path, lib = .libPaths()[[1L]],
-                           lock = getOption("install.lock", TRUE), quiet = TRUE,
+install_source <- function(path, lib = .libPaths()[[1L]], quiet = TRUE,
                            metadata = NULL, vignettes = TRUE, ...) {
 
   now <- Sys.time()
@@ -41,18 +40,14 @@ install_source <- function(path, lib = .libPaths()[[1L]],
           cond$package <- pkg_name
           cnd_signal(cond)
         }),
-        install_source(file.path(tmp_path, pkg_name), lib, lock, quiet,
+        install_source(file.path(tmp_path, pkg_name), lib, quiet,
                        metadata = metadata, vignettes = vignettes, ...)
       )
     )
   }
   pkg_name <- desc::desc_get("Package", path)
 
-  lib_cache <- library_cache(lib)
-  lock <- lock_cache(lib_cache, pkg_name, lock)
-  on.exit(unlock(lock))
-
-  tmp_dir <- create_temp_dir(tmpdir = lib_cache)
+  tmp_dir <- create_temp_dir()
   on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
 
   with_handlers(
@@ -68,7 +63,7 @@ install_source <- function(path, lib = .libPaths()[[1L]],
     cnd("pkginstall_built",
       package = pkg_name, path = tmp_dir, time = Sys.time() - now))
 
-  install_binary(built_files, lib, lock = lock, metadata = metadata)
+  install_binary(built_files, lib, metadata = metadata)
 }
 
 # pkgbuild puts the stderr output in `e$stderr`, and R CMD INSTALL / R CMD build

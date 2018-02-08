@@ -5,8 +5,8 @@
 \title{Install multiple local packages}
 \usage{
 install_packages(filenames, lib = .libPaths()[[1L]],
-  plan = get_install_plan(filenames, lib), lock = getOption("install.lock",
-  TRUE), metadata = NULL, vignettes = TRUE, num_workers = 1)
+  plan = get_install_plan(filenames, lib), metadata = NULL,
+  vignettes = TRUE, num_workers = 1)
 }
 \arguments{
 \item{filenames}{filenames of packages to install. Can be source
@@ -15,10 +15,6 @@ directories, source tarballs or binary packages.}
 \item{lib}{library to install packages into}
 
 \item{plan}{The installation plan from `pkgdepends::remote`}
-
-\item{lock}{If any value but `FALSE`, use per-package locking when
-installing. It defaults to using `getOption("install.lock")` for
-compatibility with `utils::install.packages()`.}
 
 \item{metadata}{for internal use only}
 

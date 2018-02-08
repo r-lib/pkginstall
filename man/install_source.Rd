@@ -4,18 +4,13 @@
 \alias{install_source}
 \title{Install a source package}
 \usage{
-install_source(path, lib = .libPaths()[[1L]],
-  lock = getOption("install.lock", TRUE), quiet = TRUE, metadata = NULL,
-  vignettes = TRUE, ...)
+install_source(path, lib = .libPaths()[[1L]], quiet = TRUE,
+  metadata = NULL, vignettes = TRUE, ...)
 }
 \arguments{
 \item{path}{Path to a package, or within a package.}
 
 \item{lib}{library to install packages into}
-
-\item{lock}{If any value but `FALSE`, use per-package locking when
-installing. It defaults to using `getOption("install.lock")` for
-compatibility with `utils::install.packages()`.}
 
 \item{quiet}{if \code{TRUE} suppresses output from this function.}
 

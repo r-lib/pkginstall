@@ -8,13 +8,12 @@
 #' @inheritParams install_source
 #' @keywords internal
 install_package <- function(filename, lib = .libPaths()[[1L]],
-  lock = getOption("install.lock", TRUE), metadata = NULL,
-  vignettes = TRUE, ...) {
+  metadata = NULL, vignettes = TRUE, ...) {
 
   if (is_binary_package(filename)) {
-    return(install_binary(filename, lib, lock, metadata = metadata))
+    return(install_binary(filename, lib, metadata = metadata))
   }
-  install_source(filename, lib, lock, metadata = metadata,
+  install_source(filename, lib, metadata = metadata,
                  vignettes = vignettes)
 }
 
@@ -33,8 +32,7 @@ install_package <- function(filename, lib = .libPaths()[[1L]],
 #' @export
 install_packages <- function(
   filenames, lib = .libPaths()[[1L]], plan = get_install_plan(filenames, lib),
-  lock = getOption("install.lock", TRUE), metadata = NULL, vignettes = TRUE,
-  num_workers = 1) {
+  metadata = NULL, vignettes = TRUE, num_workers = 1) {
 
   start <- Sys.time()
 
@@ -72,7 +70,7 @@ install_packages <- function(
           stop(e)
         }), {
           bar$tick(0, tokens = list(packages = get_pkg_name(file)))
-          install_package(file, lib = lib, lock = lock, metadata = meta,
+          install_package(file, lib = lib, metadata = meta,
                           vignettes = vignettes)
         })
 
@@ -93,7 +91,7 @@ install_packages <- function(
   update_progress(0)
 
   # Currently assumes the order of installation is not important
-  events <- get_events(list(plan = plan, processes = list(), results = list()), num_workers, lib, lock, bar)
+  events <- get_events(list(plan = plan, processes = list(), results = list()), num_workers, lib, bar)
   while(running_processes(events)) {
     for (output in get_output(events)) {
       is_running <- grepl("^Building", strip_style(output$output))
@@ -114,14 +112,14 @@ install_packages <- function(
         update_progress(0)
       }
     }
-    events <- get_events(events, num_workers, lib, lock, bar)
+    events <- get_events(events, num_workers, lib, bar)
   }
   bar$terminate()
 
   structure(unlist(events$results, recursive = FALSE), class = "installation_results", elapsed = Sys.time() - start)
 }
 
-get_events <- function(events, num_workers, lib, lock, bar) {
+get_events <- function(events, num_workers, lib, bar) {
   done <- map_lgl(events$processes, function(x) !x$is_alive() && !x$is_incomplete_output() && !x$is_incomplete_error())
   failed <- map_lgl(events$processes, function(x) !x$is_alive() && x$get_exit_status() != 0)
   if (any(failed)) {
@@ -146,14 +144,14 @@ get_events <- function(events, num_workers, lib, lock, bar) {
     if (any(is_binary)) {
       processes[[length(processes) + 1]] <- new_install_packages_process(
         plan$file[is_binary], plan$metadata[is_binary],
-        plan$vignettes[is_binary], lib, lock)
+        plan$vignettes[is_binary], lib)
       binary_pkgs <- plan$package[is_binary]
       plan <- plan[!is_binary, ]
       ready <- which(lengths(plan$dependencies) == 0)
     } else {
       processes[[length(processes) + 1]] <- new_install_packages_process(
         plan$file[[ready[[i]]]], plan$metadata[ready[i]],
-        plan$vignettes[ready[i]], lib, lock)
+        plan$vignettes[ready[i]], lib)
       i <- i + 1
     }
   }
@@ -253,21 +251,20 @@ is_binary_package <- function(filename) {
   }, error = function(e) FALSE)
 }
 
-new_install_packages_process <-  function(file, metadata, vignettes, lib,
-                                          lock) {
+new_install_packages_process <-  function(file, metadata, vignettes, lib) {
   callr::r_bg(
     args = list(
       filenames = file, metadata = metadata, vignettes = vignettes,
-      lib = lib, lock = lock, num_workers = 1,
+      lib = lib, num_workers = 1,
       crayon.enabled = crayon::has_color(),
       crayon.colors = crayon::num_colors()),
 
-    function(filenames, metadata, vignettes, lib, lock, num_workers,
+    function(filenames, metadata, vignettes, lib, num_workers,
              crayon.enabled, crayon.colors) {
       options("crayon.enabled" = crayon.enabled, "crayon.colors" = crayon.colors)
       pkginstall::install_packages(
         filenames, metadata = metadata, vignettes = vignettes, lib = lib,
-        lock = lock, num_workers = num_workers, plan = NULL)
+        num_workers = num_workers, plan = NULL)
     })
 }
 

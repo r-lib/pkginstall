@@ -4,8 +4,7 @@
 \alias{install_package}
 \title{Install a local R package}
 \usage{
-install_package(filename, lib = .libPaths()[[1L]],
-  lock = getOption("install.lock", TRUE), metadata = NULL,
+install_package(filename, lib = .libPaths()[[1L]], metadata = NULL,
   vignettes = TRUE, ...)
 }
 \arguments{
@@ -13,10 +12,6 @@ install_package(filename, lib = .libPaths()[[1L]],
 directory, source tarball or binary package.}
 
 \item{lib}{library to install packages into}
-
-\item{lock}{If any value but `FALSE`, use per-package locking when
-installing. It defaults to using `getOption("install.lock")` for
-compatibility with `utils::install.packages()`.}
 
 \item{metadata}{Named character vector of metadata entries to be added
 to the \code{DESCRIPTION} after installation.}

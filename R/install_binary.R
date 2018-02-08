@@ -2,9 +2,6 @@
 #'
 #' @param filename filename of built binary package to install
 #' @param lib library to install packages into
-#' @param lock If any value but `FALSE`, use per-package locking when
-#'   installing. It defaults to using `getOption("install.lock")` for
-#'   compatibility with `utils::install.packages()`.
 #' @param metadata Named character vector of metadata entries to be added
 #'   to the \code{DESCRIPTION} after installation.
 #' @importFrom archive archive archive_extract
@@ -12,7 +9,7 @@
 #' @importFrom rlang cnd cnd_signal
 #' @export
 install_binary <- function(filename, lib = .libPaths()[[1L]],
-  lock = getOption("install.lock", TRUE), metadata = NULL) {
+                           metadata = NULL) {
 
   now <- Sys.time()
 
@@ -27,8 +24,8 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
   }
 
   lib_cache <- library_cache(lib)
-  lock <- lock_cache(lib_cache, pkg_name, lock)
-  on.exit(unlock(lock))
+  lockfile <- lock_cache(lib_cache, pkg_name, getOption("install.lock"))
+  on.exit(unlock(lockfile))
 
   pkg_cache_dir <- file.path(lib_cache, pkg_name)
   if (file.exists(pkg_cache_dir)) {

@@ -36,7 +36,6 @@ Remotes:
     jimhester/archive,
     r-lib/withr,
     tidyverse/glue,
-    r-lib/filelock,
     r-lib/callr,
     r-lib/pkgbuild,
     r-lib/desc,

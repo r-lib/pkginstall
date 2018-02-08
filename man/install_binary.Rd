@@ -4,17 +4,12 @@
 \alias{install_binary}
 \title{Install a R binary package}
 \usage{
-install_binary(filename, lib = .libPaths()[[1L]],
-  lock = getOption("install.lock", TRUE), metadata = NULL)
+install_binary(filename, lib = .libPaths()[[1L]], metadata = NULL)
 }
 \arguments{
 \item{filename}{filename of built binary package to install}
 
 \item{lib}{library to install packages into}
-
-\item{lock}{If any value but `FALSE`, use per-package locking when
-installing. It defaults to using `getOption("install.lock")` for
-compatibility with `utils::install.packages()`.}
 
 \item{metadata}{Named character vector of metadata entries to be added
 to the \code{DESCRIPTION} after installation.}

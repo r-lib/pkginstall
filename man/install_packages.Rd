@@ -14,7 +14,7 @@ directories, source tarballs or binary packages.}
 
 \item{lib}{library to install packages into}
 
-\item{plan}{The installation plan from `pkgdepends::remote`}
+\item{plan}{The installation plan from \code{pkgdepends::remote}}
 
 \item{metadata}{for internal use only}
 

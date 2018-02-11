@@ -10,8 +10,8 @@ verify_binary(filename)
 \item{filename}{filename of built binary package to install}
 }
 \value{
-A [desc::desc()] object of the DESCRIPTION file from the binary
-  archive.
+A \code{\link[desc:desc]{desc::desc()}} object of the DESCRIPTION file from the binary
+archive.
 }
 \description{
 Verify a R binary archive is valid

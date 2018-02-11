@@ -19,7 +19,7 @@ to the \code{DESCRIPTION} after installation.}
 
 \item{vignettes}{whether to (re)build the vignettes of the packages}
 
-\item{...}{Additional arguments passed to [pkgbuild::build].}
+\item{...}{Additional arguments passed to \link[pkgbuild:build]{pkgbuild::build}.}
 }
 \description{
 Install a source package

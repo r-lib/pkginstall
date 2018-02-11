@@ -1,10 +1,13 @@
 Package: pkginstall
-Title: Installs binary R packages
+Title: Installs Packages from Local Files
 Version: 0.0.0.9000
-Authors@R: person("Jim", "Hester", email = "james.f.hester@gmail.com", role = c("aut", "cre"))
-Description: Provides a replacement for `utils::install.packages(repo = NULL)`
-    for binary packages. i.e. it extracts the compressed archives into the package
-    library.
+Authors@R:
+    c(person("Jim", "Hester", email = "james.f.hester@gmail.com",
+             role = c("aut", "cre")),
+      person("Gábor", "Gábor", email = "csardi.gabor@gmail.com", role = "aut"))
+Description: Provides a replacement for `utils::install.packages(repo = NULL)`.
+    I.e. it builds binary packages from source packages, and extracts the
+    compressed archives into the package library.
 License: GPL-3
 Depends: 
     R (>= 3.1)

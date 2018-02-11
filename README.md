@@ -8,8 +8,9 @@
   <a href="https://asciinema.org/a/Cqnq0oTTlAHI3KcU6LePFNsEU?autoplay=1" target="_blank"><img src="https://asciinema.org/a/Cqnq0oTTlAHI3KcU6LePFNsEU.png" width = "75%"/></a>
 </p>
 
-Provides a replacement for `utils::install.packages(repo = NULL)` for binary
-packages. i.e. it extracts the compressed archives into the package library.
+Provides a replacement for `utils::install.packages(repo = NULL)`.
+I.e. it builds binary packages from source packages, and extracts the
+compressed archives into the package library.
 
 Compared to `utils::install.packages()` it
 

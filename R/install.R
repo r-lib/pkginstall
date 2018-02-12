@@ -1,21 +1,3 @@
-#' Install a local R package
-#'
-#' @param filename filename of package to install. Can be a source
-#' directory, source tarball or binary package.
-#' @param vignettes whether to (re)build the vignettes of the packages.
-#' It is ignored for binary packages.
-#' @inheritParams install_binary
-#' @inheritParams install_source
-#' @keywords internal
-install_package <- function(filename, lib = .libPaths()[[1L]],
-  metadata = NULL, vignettes = TRUE, ...) {
-
-  if (is_binary_package(filename)) {
-    return(install_binary(filename, lib, metadata = metadata))
-  }
-  install_source(filename, lib, metadata = metadata,
-                 vignettes = vignettes)
-}
 
 #' Install multiple local packages
 #'
@@ -23,58 +5,50 @@ install_package <- function(filename, lib = .libPaths()[[1L]],
 #' directories, source tarballs or binary packages.
 #' @inheritParams install_binary
 #' @param num_workers Number of parallel workers to use
-#' @param plan The installation plan from `pkgdepends::remote`
-#' @param metadata for internal use only
-#' @param vignettes whether to (re)build the vignettes of the packages
+#' @export
+install_packages <- function(filenames, lib = .libPaths()[[1L]],
+                             num_workers = 1) {
+
+  plan <- get_install_plan(filenames, lib)
+  install_packages_internal(filenames, lib, num_workers, plan, TRUE,
+                            num_workers)
+}
+
 #' @importFrom rlang with_handlers exiting inplace
 #' @importFrom processx poll
-#' @importFrom tibble data_frame
-#' @export
-install_packages <- function(
-  filenames, lib = .libPaths()[[1L]], plan = get_install_plan(filenames, lib),
-  metadata = NULL, vignettes = TRUE, num_workers = 1) {
+install_packages_internal <- function(
+  filenames, lib, num_workers, plan, metadata, vignettes) {
 
   start <- Sys.time()
 
   progress <- is_verbose()
-
-  bar_fmt <- if (isTRUE(progress)) {
-    collapse(sep = " | ", c(
-      "[:current/:total] :elapsedfull",
-      "ETA: :eta",
-      if (num_workers > 1) ":processes/:num_workers",
-      ":packages"))
-  } else {
-    ""
-  }
-
-  bar <- progress::progress_bar$new(
-    total = if (!is.null(plan)) NROW(plan) else length(filenames),
-    format = bar_fmt,
-    stream = stdout(),
-    show_after = 0
-  )
+  bar <- setup_progress_bar(progress, plan, num_workers)
 
   if (is.null(plan)) {
     res <- lapply(seq_along(filenames), function(idx) {
       file <- filenames[idx]
       meta <- metadata[[idx]]
-      format_message <- inplace(function(x) bar$message(format(x)))
+      format_message <- inplace(
+        function(x) if (progress) bar$message(format(x)))
       installed_path <- with_handlers(
         pkginstall_installed = format_message,
         pkginstall_built = format_message,
         pkginstall_begin = format_message,
         error = exiting(function(e) {
           name <- basename(e$package %||% e$path %||% file)
-          bar$message(glue("{red_cross()} Failed {name}"))
+          if (progress) bar$message(glue("{red_cross()} Failed {name}"))
           stop(e)
         }), {
-          bar$tick(0, tokens = list(packages = get_pkg_name(file)))
+          if (progress) {
+            bar$tick(0, tokens = list(packages = get_pkg_name(file)))
+          }
           install_package(file, lib = lib, metadata = meta,
                           vignettes = vignettes)
         })
 
-      bar$tick(1, tokens = list(packages = get_pkg_name(file)))
+      if (progress) {
+        bar$tick(1, tokens = list(packages = get_pkg_name(file)))
+      }
       installed_path
     })
 
@@ -86,7 +60,9 @@ install_packages <- function(
   results <- list()
   processes <- list()
   update_progress <- function(count) {
-    bar$tick(count, tokens = list(packages = collapse(running, ", "), processes = length(processes), num_workers = num_workers))
+    if (progress) {
+      bar$tick(count, tokens = list(packages = collapse(running, ", "), processes = length(processes), num_workers = num_workers))
+    }
   }
   update_progress(0)
 
@@ -105,18 +81,54 @@ install_packages <- function(
         installed <- sub(". Installed ([^[:space:]]+).*", "\\1", installed)
 
         running <- setdiff(running, installed)
-        bar$message(finished)
-        update_progress(length(installed))
+        if (progress) {
+          bar$message(finished)
+          update_progress(length(installed))
+        }
       }
-      if (!bar$finished && length(running)) {
+      if (progress && !bar$finished && length(running)) {
         update_progress(0)
       }
     }
     events <- get_events(events, num_workers, lib, bar)
   }
-  bar$terminate()
+  if (progress) bar$terminate()
 
   structure(unlist(events$results, recursive = FALSE), class = "installation_results", elapsed = Sys.time() - start)
+}
+
+setup_progress_bar <- function(progress, plan, num_workers) {
+  if (isTRUE(progress)) {
+    bar_fmt <- collapse(sep = " | ", c(
+      "[:current/:total] :elapsedfull",
+      "ETA: :eta",
+      if (num_workers > 1) ":processes/:num_workers",
+      ":packages"
+    ))
+    progress::progress_bar$new(
+      total = if (!is.null(plan)) NROW(plan) else length(filenames),
+      format = bar_fmt,
+      stream = stdout(),
+      show_after = 0
+    )
+  }
+}
+
+#' Install a local R package
+#'
+#' @param filename filename of package to install. Can be a source
+#' directory, source tarball or binary package.
+#' @param vignettes whether to (re)build the vignettes of the packages.
+#' It is ignored for binary packages.
+#' @inheritParams install_binary
+#' @inheritParams install_source
+#' @keywords internal
+install_package <- function(filename, lib, metadata, vignettes) {
+  if (is_binary_package(filename)) {
+    install_binary(filename, lib, metadata, vignettes)
+  } else {
+    install_source(filename, lib, metadata, vignettes)
+  }
 }
 
 get_events <- function(events, num_workers, lib, bar) {

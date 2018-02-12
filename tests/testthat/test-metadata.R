@@ -51,7 +51,10 @@ test_that("install_packages metadata", {
   withr::with_options(list(pkg.show_progress = FALSE), {
     plan <- get_install_plan(pkg, library = libpath)
     plan$metadata[[1]] <- c("Foo" = "Bar", "Foobar" = "baz")
-    expect_error_free(install_packages(pkg, lib = libpath, plan = plan))
+    expect_error_free(
+      install_packages_internal(
+        pkg, lib = libpath, plan = plan, num_workers = 1,
+        metadata = plan$metadata, vignettes = FALSE))
   })
 
   dsc <- desc::desc(file.path(libpath, "foo"))

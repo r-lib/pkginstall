@@ -1,3 +1,6 @@
+
+context("install_packages")
+
 describe("install_package", {
   it("works with source packages", {
 
@@ -13,11 +16,13 @@ describe("install_package", {
     unlink(pkg)
   })
 
-  expect_error_free(
-    install_package("foo_0.0.0.9000.tar.gz", lib = libpath))
+  withr::with_options(
+    list(pkg.show_progress = FALSE),
+    expect_error_free(
+      install_packages("foo_0.0.0.9000.tar.gz", lib = libpath))
+  )
 
-  expect_error_free(
-    library("foo", lib.loc = libpath))
+  expect_error_free(library("foo", lib.loc = libpath))
   })
 })
 

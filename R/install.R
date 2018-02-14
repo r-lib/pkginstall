@@ -10,51 +10,17 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
                              num_workers = 1) {
 
   plan <- get_install_plan(filenames, lib)
-  install_packages_internal(filenames, lib, num_workers, plan, TRUE,
-                            num_workers)
+  install_packages_internal(filenames, lib, num_workers, plan)
 }
 
 #' @importFrom rlang with_handlers exiting inplace
 #' @importFrom processx poll
-install_packages_internal <- function(
-  filenames, lib, num_workers, plan, metadata, vignettes) {
+install_packages_internal <- function(filenames, lib, num_workers, plan) {
 
   start <- Sys.time()
 
   progress <- is_verbose()
   bar <- setup_progress_bar(progress, plan, num_workers)
-
-  if (is.null(plan)) {
-    res <- lapply(seq_along(filenames), function(idx) {
-      file <- filenames[idx]
-      meta <- metadata[[idx]]
-      format_message <- inplace(
-        function(x) if (progress) bar$message(format(x)))
-      installed_path <- with_handlers(
-        pkginstall_installed = format_message,
-        pkginstall_built = format_message,
-        pkginstall_begin = format_message,
-        error = exiting(function(e) {
-          name <- basename(e$package %||% e$path %||% file)
-          if (progress) bar$message(glue("{red_cross()} Failed {name}"))
-          stop(e)
-        }), {
-          if (progress) {
-            bar$tick(0, tokens = list(packages = get_pkg_name(file)))
-          }
-          install_package(file, lib = lib, metadata = meta,
-                          vignettes = vignettes)
-        })
-
-      if (progress) {
-        bar$tick(1, tokens = list(packages = get_pkg_name(file)))
-      }
-      installed_path
-    })
-
-    names(res) <- filenames
-    return(structure(res, class = "installation_results", elapsed = Sys.time() - start))
-  }
 
   running <- character()
   results <- list()
@@ -97,6 +63,35 @@ install_packages_internal <- function(
   structure(unlist(events$results, recursive = FALSE), class = "installation_results", elapsed = Sys.time() - start)
 }
 
+install_packages_simple <- function(filenames, lib, metadata, vignettes) {
+
+  start <- Sys.time()
+
+  res <- lapply(seq_along(filenames), function(idx) {
+    file <- filenames[idx]
+    meta <- metadata[[idx]]
+    vig <- vignettes[idx]
+    format_message <- inplace(function(x) cat(format(x)))
+    installed_path <- with_handlers(
+      pkginstall_installed = format_message,
+      pkginstall_built = format_message,
+      pkginstall_begin = format_message,
+      error = exiting(function(e) {
+        name <- basename(e$package %||% e$path %||% file)
+        cat(glue("{red_cross()} Failed {name}"))
+        stop(e)
+      }), {
+        ## bar$tick(0, tokens = list(packages = get_pkg_name(file)))
+        install_package(file, lib = lib, metadata = meta, vignettes = vig)
+      })
+    ## bar$tick(1, tokens = list(packages = get_pkg_name(file)))
+    installed_path
+  })
+
+  names(res) <- filenames
+  return(structure(res, class = "installation_results", elapsed = Sys.time() - start))
+}
+
 setup_progress_bar <- function(progress, plan, num_workers) {
   if (isTRUE(progress)) {
     bar_fmt <- collapse(sep = " | ", c(
@@ -106,7 +101,7 @@ setup_progress_bar <- function(progress, plan, num_workers) {
       ":packages"
     ))
     progress::progress_bar$new(
-      total = if (!is.null(plan)) NROW(plan) else length(filenames),
+      total = nrow(plan),
       format = bar_fmt,
       stream = stdout(),
       show_after = 0
@@ -125,9 +120,9 @@ setup_progress_bar <- function(progress, plan, num_workers) {
 #' @keywords internal
 install_package <- function(filename, lib, metadata, vignettes) {
   if (is_binary_package(filename)) {
-    install_binary(filename, lib, metadata, vignettes)
+    install_binary(filename, lib, metadata = metadata)
   } else {
-    install_source(filename, lib, metadata, vignettes)
+    install_source(filename, lib, metadata = metadata, vignettes = vignettes)
   }
 }
 
@@ -266,17 +261,15 @@ is_binary_package <- function(filename) {
 new_install_packages_process <-  function(file, metadata, vignettes, lib) {
   callr::r_bg(
     args = list(
-      filenames = file, metadata = metadata, vignettes = vignettes,
-      lib = lib, num_workers = 1,
-      crayon.enabled = crayon::has_color(),
+      filenames = file, lib = lib, metadata = metadata,
+      vignettes = vignettes, crayon.enabled = crayon::has_color(),
       crayon.colors = crayon::num_colors()),
 
-    function(filenames, metadata, vignettes, lib, num_workers,
+    function(filenames, metadata, vignettes, lib,
              crayon.enabled, crayon.colors) {
       options("crayon.enabled" = crayon.enabled, "crayon.colors" = crayon.colors)
-      pkginstall::install_packages(
-        filenames, metadata = metadata, vignettes = vignettes, lib = lib,
-        num_workers = num_workers, plan = NULL)
+      get("install_packages_simple", asNamespace("pkginstall"))(
+        filenames, lib = lib, metadata = metadata, vignettes = vignettes)
     })
 }
 

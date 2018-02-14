@@ -22,7 +22,7 @@ local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent
   # useful when debugging.
   is_globalenv <- identical(envir, globalenv())
   if (!is_globalenv) {
-    defer(unlink(d, recursive = TRUE), envir = envir)
+    withr::defer(unlink(d, recursive = TRUE), envir = envir)
   }
   filename
 }
@@ -42,7 +42,7 @@ binary_test_package <- function(name) {
 }
 
 expect_error_free <- function(...) {
-  expect_error(..., regexp = NA)
+  testthat::expect_error(..., regexp = NA)
 }
 
 if (is_loaded("foo")) {

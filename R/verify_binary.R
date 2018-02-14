@@ -5,7 +5,7 @@
 #'   archive.
 #' @importFrom archive archive archive_read archive_write_dir
 #' @importFrom desc desc
-#' @importFrom withr local_connection defer local_libpaths
+#' @importFrom withr local_connection
 #' @importFrom utils head
 #' @export
 verify_binary <- function(filename) {

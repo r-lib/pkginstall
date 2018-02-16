@@ -25,7 +25,7 @@ Compared to `utils::install.packages()` it
 ## Installation
 
 ```r
-devtools::install_github("pkginstall")
+devtools::install_github("r-lib/pkginstall")
 ```
 
 ## Example

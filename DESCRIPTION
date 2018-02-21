@@ -13,6 +13,7 @@ Depends:
     R (>= 3.1)
 Imports: 
     archive,
+    callr,
     clisymbols,
     crayon,
     desc,
@@ -28,7 +29,6 @@ Imports:
     progress,
     pkgdepends
 Suggests: 
-    callr,
     covr,
     testthat
 ByteCompile: true

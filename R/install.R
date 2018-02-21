@@ -27,7 +27,7 @@ install_package <- function(filename, lib = .libPaths()[[1L]],
 #' @param metadata for internal use only
 #' @param vignettes whether to (re)build the vignettes of the packages
 #' @importFrom rlang with_handlers exiting inplace
-#' @importFrom processx poll
+#' @importFrom callr poll
 #' @importFrom tibble data_frame
 #' @export
 install_packages <- function(

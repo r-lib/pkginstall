@@ -21,7 +21,6 @@ Imports:
     glue,
     pkgbuild,
     prettyunits,
-    processx,
     rematch2,
     rlang,
     tibble,

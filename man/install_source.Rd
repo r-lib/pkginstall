@@ -5,7 +5,7 @@
 \title{Install a source package}
 \usage{
 install_source(path, lib = .libPaths()[[1L]], quiet = TRUE,
-  metadata = NULL, vignettes = TRUE, ...)
+  metadata = NULL, vignettes = TRUE, ..., compile_attributes = NULL)
 }
 \arguments{
 \item{path}{Path to a package, or within a package.}
@@ -19,8 +19,11 @@ to the \code{DESCRIPTION} after installation.}
 
 \item{vignettes}{whether to (re)build the vignettes of the packages}
 
-\item{...}{Additional arguments passed to \link[pkgbuild:build]{pkgbuild::build}.}
+\item{...}{Additional arguments passed to \code{\link[pkgbuild:build]{pkgbuild::build()}}.}
+
+\item{compile_attributes}{Passed on to \code{\link[pkgbuild:build]{pkgbuild::build()}}, default \code{FALSE}
+if installing from tarball, \code{TRUE} otherwise.}
 }
 \description{
-Install a source package
+Supports installation from directories or tarballs.
 }

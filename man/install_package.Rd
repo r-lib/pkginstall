@@ -19,7 +19,7 @@ to the \code{DESCRIPTION} after installation.}
 \item{vignettes}{whether to (re)build the vignettes of the packages.
 It is ignored for binary packages.}
 
-\item{...}{Additional arguments passed to \link[pkgbuild:build]{pkgbuild::build}.}
+\item{...}{Additional arguments passed to \code{\link[pkgbuild:build]{pkgbuild::build()}}.}
 }
 \description{
 Install a local R package

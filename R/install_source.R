@@ -35,7 +35,7 @@ install_source <- function(path, lib = .libPaths()[[1L]], quiet = TRUE,
     archive_extract(path, tmp_path)
 
     if (is.null(compile_attributes)) {
-      compile_attributes = FALSE
+      compile_attributes <- FALSE
     }
 
     return(
@@ -51,7 +51,7 @@ install_source <- function(path, lib = .libPaths()[[1L]], quiet = TRUE,
         }),
         install_source(file.path(tmp_path, pkg_name), lib, quiet,
                        metadata = metadata, vignettes = vignettes, ...,
-                       compile_attributes = FALSE)
+                       compile_attributes = compile_attributes)
       )
     )
   }

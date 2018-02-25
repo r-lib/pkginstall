@@ -13,8 +13,19 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
 
   now <- Sys.time()
 
-  desc <- verify_binary(filename)
-  pkg_name <- desc$get("Package")
+  lib_cache <- library_cache(lib)
+  mkdirp(pkg_cache <- tempfile(tmpdir = lib_cache))
+  on.exit(unlink(pkg_cache, recursive = TRUE), add = TRUE)
+
+  tryCatch(archive_extract(filename, dir = pkg_cache),
+    error = function(e) {
+      abort(type = "invalid_input",
+            "{filename} is an invalid archive, could not extract it")
+    }
+  )
+  pkg <- verify_extracted_package(filename, pkg_cache)
+  add_metadata(pkg$path, metadata)
+  pkg_name <- pkg$name
 
   if (is_loaded(pkg_name)) {
     warn(type = "runtime_error",
@@ -23,17 +34,8 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
      package = pkg_name)
   }
 
-  lib_cache <- library_cache(lib)
   lockfile <- lock_cache(lib_cache, pkg_name, getOption("install.lock"))
-  on.exit(unlock(lockfile))
-
-  pkg_cache_dir <- file.path(lib_cache, pkg_name)
-  if (file.exists(pkg_cache_dir)) {
-    unlink(pkg_cache_dir, recursive = TRUE, force = TRUE)
-  }
-
-  archive_extract(filename, dir = lib_cache)
-  add_metadata(file.path(lib_cache, pkg_name), metadata)
+  on.exit(unlock(lockfile), add = TRUE)
 
   installed_path <- file.path(lib, pkg_name)
   if (file.exists(installed_path)) {
@@ -54,10 +56,10 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
         package = pkg_name)
     }
   }
-  ret <- file.rename(pkg_cache_dir, installed_path)
+  ret <- file.rename(pkg$path, installed_path)
   if (!ret) {
     abort(type = "filesystem",
-      "Unable to move package from {pkg_cache_dir} to {installed_path}",
+      "Unable to move package from {pkg$path} to {installed_path}",
       package = pkg_name)
   }
 

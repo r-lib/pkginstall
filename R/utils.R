@@ -97,3 +97,11 @@ lengths <- function(x) vapply(x, length, integer(1))
 is_verbose <- function() {
   getOption("pkg.show_progress") %||% interactive()
 }
+
+mkdirp <- function(x) {
+  dir.create(x, showWarnings = FALSE, recursive = TRUE)
+}
+
+str_trim <- function(x) {
+  sub("\\s$", "", sub("^\\s+", "", x))
+}

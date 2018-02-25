@@ -23,6 +23,14 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
             "{filename} is an invalid archive, could not extract it")
     }
   )
+
+  install_extracted_binary(filename, lib_cache, pkg_cache, lib,
+                           metadata, now)
+}
+
+install_extracted_binary <- function(filename, lib_cache, pkg_cache, lib,
+                                     metadata, now) {
+
   pkg <- verify_extracted_package(filename, pkg_cache)
   add_metadata(pkg$path, metadata)
   pkg_name <- pkg$name

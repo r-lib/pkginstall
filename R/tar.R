@@ -114,42 +114,66 @@ eup_get_args <- function(options) {
 }
 
 get_untar_decompress_arg <- function(tarfile) {
-  if (is_gzip_file(tarfile)) {
-    "-z"
-  } else if (is_bzip2_file(tarfile)) {
-    "-j"
-  } else if (is_xz_file(tarfile)) {
-    "-J"
+  type <- detect_package_archive_tyte(tarfile)
+  switch(
+    type,
+    "gzip" = "-z",
+    "bzip2" = "-j",
+    "xz" = "-J",
+    "zip" = stop("Not a tar file, looks like a zip file"),
+    "unknown" = character()
+  )
+}
+
+detect_package_archive_type <- function(file) {
+  buf <- readBin(file, what = "raw", n = 6)
+  if (is_gzip(buf)) {
+    "gzip"
+  } else if (is_zip(buf)) {
+    "zip"
+  } else if (is_bzip2(buf)) {
+    "bzip2"
+  } else if (is_xz(buf)) {
+    "xz"
   } else {
-    character()
+    "unknown"
   }
 }
 
-is_gzip_file <- function(file) {
-  buf <- readBin(file, what = "raw", n = 3)
-  length(buf) == 3 &&
+is_gzip <- function(buf) {
+  if (!is.raw(buf)) buf <- readBin(buf, what = "raw", n = 3)
+  length(buf) >= 3 &&
     buf[1] == 0x1f &&
     buf[2] == 0x8b &&
     buf[3] == 0x08
 }
 
-is_bzip2_file <- function(file) {
-  buf <- readBin(file, what = "raw", n = 3)
-  length(buf) == 3 &&
+is_bzip2 <- function(buf) {
+  if (!is.raw(buf)) buf <- readBin(buf, what = "raw", n = 3)
+  length(buf) >= 3 &&
     buf[1] == 0x42 &&
     buf[2] == 0x5a &&
     buf[3] == 0x68
 }
 
-is_xz_file <- function(file) {
-  buf <- readBin(file, what = "raw", n = 6)
-  length(buf) == 6 &&
+is_xz <- function(buf) {
+  if (!is.raw(buf)) buf <- readBin(buf, what = "raw", n = 6)
+  length(buf) >= 6 &&
     buf[1] == 0xFD &&
     buf[2] == 0x37 &&
     buf[3] == 0x7A &&
     buf[4] == 0x58 &&
     buf[5] == 0x5A &&
     buf[6] == 0x00
+}
+
+is_zip <- function(buf) {
+  if (!is.raw(buf)) buf <- readBin(buf, what = "raw", n = 4)
+  length(buf) >= 4 &&
+    buf[1] == 0x50 &&
+    buf[2] == 0x4b &&
+    (buf[3] == 0x03 || buf[3] == 0x05 || buf[5] == 0x07) &&
+    (buf[4] == 0x04 || buf[4] == 0x06 || buf[4] == 0x08)
 }
 
 #' @importFrom callr r_process_options

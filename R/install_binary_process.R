@@ -15,8 +15,8 @@ make_install_process <- function(filename, lib = .libPaths()[[1L]],
   mkdirp(pkg_cache <- tempfile(tmpdir = lib_cache))
 
   ppfun <- function() {
-    install_extracted_binary(filename, lib_cache, pkg_cache, lib,
-                             metadata, now)
+   install_extracted_binary(filename, lib_cache, pkg_cache, lib,
+                            metadata, now)
   }
 
   p <- if (type == "zip") {

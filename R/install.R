@@ -19,21 +19,12 @@ install_packages_internal <- function(filenames, lib, num_workers, plan) {
 
   start <- Sys.time()
 
-  progress <- is_verbose()
-  bar <- setup_progress_bar(progress, plan, num_workers)
-
   running <- character()
   results <- list()
   processes <- list()
-  update_progress <- function(count) {
-    if (progress) {
-      bar$tick(count, tokens = list(packages = collapse(running, ", "), processes = length(processes), num_workers = num_workers))
-    }
-  }
-  update_progress(0)
 
   # Currently assumes the order of installation is not important
-  events <- get_events(list(plan = plan, processes = list(), results = list()), num_workers, lib, bar)
+  events <- get_events(list(plan = plan, processes = list(), results = list()), num_workers, lib)
   while(running_processes(events)) {
     for (output in get_output(events)) {
       is_running <- grepl("^Building", strip_style(output$output))
@@ -47,18 +38,10 @@ install_packages_internal <- function(filenames, lib, num_workers, plan) {
         installed <- sub(". Installed ([^[:space:]]+).*", "\\1", installed)
 
         running <- setdiff(running, installed)
-        if (progress) {
-          bar$message(finished)
-          update_progress(length(installed))
-        }
-      }
-      if (progress && !bar$finished && length(running)) {
-        update_progress(0)
       }
     }
-    events <- get_events(events, num_workers, lib, bar)
+    events <- get_events(events, num_workers, lib)
   }
-  if (progress) bar$terminate()
 
   structure(unlist(events$results, recursive = FALSE), class = "installation_results", elapsed = Sys.time() - start)
 }
@@ -81,32 +64,13 @@ install_packages_simple <- function(filenames, lib, metadata, vignettes) {
         cat(glue("{red_cross()} Failed {name}"))
         stop(e)
       }), {
-        ## bar$tick(0, tokens = list(packages = get_pkg_name(file)))
         install_package(file, lib = lib, metadata = meta, vignettes = vig)
       })
-    ## bar$tick(1, tokens = list(packages = get_pkg_name(file)))
     installed_path
   })
 
   names(res) <- filenames
   return(structure(res, class = "installation_results", elapsed = Sys.time() - start))
-}
-
-setup_progress_bar <- function(progress, plan, num_workers) {
-  if (isTRUE(progress)) {
-    bar_fmt <- collapse(sep = " | ", c(
-      "[:current/:total] :elapsedfull",
-      "ETA: :eta",
-      if (num_workers > 1) ":processes/:num_workers",
-      ":packages"
-    ))
-    progress::progress_bar$new(
-      total = nrow(plan),
-      format = bar_fmt,
-      stream = stdout(),
-      show_after = 0
-    )
-  }
 }
 
 #' Install a local R package
@@ -126,12 +90,11 @@ install_package <- function(filename, lib, metadata, vignettes) {
   }
 }
 
-get_events <- function(events, num_workers, lib, bar) {
+get_events <- function(events, num_workers, lib) {
   done <- map_lgl(events$processes, function(x) !x$is_alive() && !x$is_incomplete_output() && !x$is_incomplete_error())
   failed <- map_lgl(events$processes, function(x) !x$is_alive() && x$get_exit_status() != 0)
   if (any(failed)) {
     kill_all_processes(events$processes)
-    bar$terminate()
     events$processes$get_result[which(failed)[[1]]]
   }
   results <- append(events$results, lapply(events$processes[done], function(x) x$get_result()))

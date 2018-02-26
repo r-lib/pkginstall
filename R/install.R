@@ -14,7 +14,7 @@ install_packages <- function(filenames, lib = .libPaths()[[1L]],
 }
 
 #' @importFrom rlang with_handlers exiting inplace
-#' @importFrom processx poll
+#' @importFrom callr poll
 install_packages_internal <- function(filenames, lib, num_workers, plan) {
 
   start <- Sys.time()

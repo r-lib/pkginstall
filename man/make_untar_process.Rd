@@ -16,6 +16,8 @@ make_untar_process(tarfile, files = NULL, exdir = ".",
 \item{exdir}{Where to extract the archive. It must exist.}
 
 \item{restore_times}{Whether to restore file modification times.}
+
+\item{post_process}{Function to call after the extraction.}
 }
 \value{
 The \link[callr:process]{callr::process} object.

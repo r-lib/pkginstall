@@ -12,16 +12,19 @@
 #'   `NULL` then everything is extracted.
 #' @param exdir Where to extract the archive. It must exist.
 #' @param restore_times Whether to restore file modification times.
+#' @param post_process Function to call after the extraction.
 #' @return The [callr::process] object.
 #' @keywords internal
 
 make_untar_process <- function(tarfile, files = NULL, exdir = ".",
-                               restore_times = TRUE) {
+                               restore_times = TRUE, post_process = NULL) {
   internal <- need_internal_tar()
   if (internal) {
-    r_untar_process$new(tarfile, files, exdir, restore_times)
+    r_untar_process$new(tarfile, files, exdir, restore_times,
+                        post_process = post_process)
   } else {
-    external_untar_process$new(tarfile, files, exdir, restore_times)
+    external_untar_process$new(tarfile, files, exdir, restore_times,
+                               post_process = post_process)
   }
 }
 
@@ -62,9 +65,10 @@ external_untar_process <- R6Class(
   public = list(
     initialize = function(tarfile, files = NULL, exdir = ".",
                           restore_times = TRUE,
-                          tar = Sys.getenv("TAR", "tar"))
+                          tar = Sys.getenv("TAR", "tar"),
+                          post_process = NULL)
       eup_init(self, private, super, tarfile, files, exdir,
-               restore_times, tar)
+               restore_times, tar, post_process)
   ),
 
   private = list(
@@ -78,9 +82,9 @@ r_untar_process <- R6Class(
 
   public = list(
     initialize = function(tarfile, files = NULL, exdir = ".",
-                          restore_times = TRUE)
+                          restore_times = TRUE, post_process = NULL)
       runtar_init(self, private, super, tarfile, files, exdir,
-                  restore_times, tar)
+                  restore_times, tar, post_process)
   ),
 
   private = list(
@@ -89,7 +93,7 @@ r_untar_process <- R6Class(
 )
 
 eup_init <- function(self, private, super, tarfile, files, exdir,
-                     restore_times, tar) {
+                     restore_times, tar, post_process) {
 
   private$options <- list(
     tarfile = normalizePath(tarfile),
@@ -99,7 +103,7 @@ eup_init <- function(self, private, super, tarfile, files, exdir,
     tar = tar)
 
   private$options$args <- eup_get_args(private$options)
-  super$initialize(tar, private$options$args)
+  super$initialize(tar, private$options$args, post_process = post_process)
   invisible(self)
 }
 
@@ -114,7 +118,7 @@ eup_get_args <- function(options) {
 }
 
 get_untar_decompress_arg <- function(tarfile) {
-  type <- detect_package_archive_tyte(tarfile)
+  type <- detect_package_archive_type(tarfile)
   switch(
     type,
     "gzip" = "-z",
@@ -179,7 +183,7 @@ is_zip <- function(buf) {
 #' @importFrom callr r_process_options
 
 runtar_init <- function(self, private, super, tarfile, files, exdir,
-                        restore_times, tar) {
+                        restore_times, tar, post_process) {
 
   options <- list(
     tarfile = normalizePath(tarfile),
@@ -191,7 +195,7 @@ runtar_init <- function(self, private, super, tarfile, files, exdir,
 
   process_options <- r_process_options()
   process_options$func <- function(options) {
-    utils::untar(
+    ret <- utils::untar(
       tarfile = options$tarfile,
       files = options$files,
       list = FALSE,

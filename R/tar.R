@@ -103,7 +103,8 @@ eup_init <- function(self, private, super, tarfile, files, exdir,
     tar = tar)
 
   private$options$args <- eup_get_args(private$options)
-  super$initialize(tar, private$options$args, post_process = post_process)
+  super$initialize(tar, private$options$args, post_process = post_process,
+                   stdout = "|", stderr = "|")
   invisible(self)
 }
 

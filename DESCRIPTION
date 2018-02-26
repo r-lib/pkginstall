@@ -21,6 +21,7 @@ Imports:
     pkgbuild,
     prettyunits,
     processx,
+    R6,
     rematch2,
     rlang,
     withr,

@@ -1,12 +1,17 @@
 #' Install a source package
 #'
+#' Supports installation from directories or tarballs.
+#'
 #' @inheritParams install_binary
 #' @inheritParams pkgbuild::build
 #' @param vignettes whether to (re)build the vignettes of the packages
-#' @param ... Additional arguments passed to [pkgbuild::build].
+#' @param ... Additional arguments passed to [pkgbuild::build()].
+#' @param compile_attributes Passed on to [pkgbuild::build()], default `FALSE`
+#'   if installing from tarball, `TRUE` otherwise.
 #' @export
 install_source <- function(path, lib = .libPaths()[[1L]], quiet = TRUE,
-                           metadata = NULL, vignettes = TRUE, ...) {
+                           metadata = NULL, vignettes = TRUE, ...,
+                           compile_attributes = NULL) {
 
   now <- Sys.time()
 
@@ -29,6 +34,10 @@ install_source <- function(path, lib = .libPaths()[[1L]], quiet = TRUE,
     tmp_path <- tempfile()
     archive_extract(path, tmp_path)
 
+    if (is.null(compile_attributes)) {
+      compile_attributes <- FALSE
+    }
+
     return(
       with_handlers(
         pkginstall_begin = inplace(identity, muffle = TRUE),
@@ -41,10 +50,16 @@ install_source <- function(path, lib = .libPaths()[[1L]], quiet = TRUE,
           cnd_signal(cond)
         }),
         install_source(file.path(tmp_path, pkg_name), lib, quiet,
-                       metadata = metadata, vignettes = vignettes, ...)
+                       metadata = metadata, vignettes = vignettes, ...,
+                       compile_attributes = compile_attributes)
       )
     )
   }
+
+  if (is.null(compile_attributes)) {
+    compile_attributes <- TRUE
+  }
+
   pkg_name <- desc::desc_get("Package", path)
 
   tmp_dir <- create_temp_dir()
@@ -52,7 +67,8 @@ install_source <- function(path, lib = .libPaths()[[1L]], quiet = TRUE,
 
   with_handlers(
     pkgbuild::build(path, tmp_dir, binary = TRUE, vignettes = vignettes,
-                    quiet = quiet, args = glue("--library={lib}"), ...),
+                    quiet = quiet, args = glue("--library={lib}"),
+                    compile_attributes = compile_attributes, ...),
     system_command_error = exiting(handle_pkgbuild_errors))
 
   built_files <- list.files(tmp_dir, full.names = TRUE)

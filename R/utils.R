@@ -105,3 +105,39 @@ mkdirp <- function(x) {
 str_trim <- function(x) {
   sub("\\s$", "", sub("^\\s+", "", x))
 }
+
+rep_list <- function(n, expr) {
+  lapply(integer(n), eval.parent(substitute(function(...) expr)))
+}
+
+drop_nulls <- function(x) {
+  is_null <- vapply(x, is.null, logical(1))
+  x[!is_null]
+}
+
+#' @importFrom callr r_process r_process_options
+
+make_dummy_worker_process <- function(n_iter = 10, sleep = 1, status = 0) {
+  r_process$new(r_process_options(
+    func = function(n_iter, sleep, status) {
+      for (i in seq_len(n_iter)) {
+        cat("out ", i, "\n", sep = "")
+        message("err ", i)
+        Sys.sleep(sleep)
+      }
+      status
+      .GlobalEnv$.Last <- function() {
+        rm(list = ".Last", envir = .GlobalEnv)
+        quit(save = "no", status = status)
+      }
+    },
+    args = list(n_iter = n_iter, sleep = sleep, status = status)
+  ))
+}
+
+cut_into_lines <- function(x) {
+  x <- do.call(paste0, as.list(x))
+  x <- gsub("\r\n", "\n", x, fixed = TRUE)
+  x <- strsplit(x, "\n", fixed = TRUE)[[1]]
+  if (length(x)) x else ""
+}

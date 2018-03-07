@@ -1,244 +1,328 @@
 
-#' Install multiple local packages
+#' Perform a package installation plan, as creted by pkgdepends
 #'
-#' @param filenames filenames of packages to install. Can be source
-#' directories, source tarballs or binary packages.
-#' @inheritParams install_binary
-#' @param num_workers Number of parallel workers to use
-#' @export
-install_packages <- function(filenames, lib = .libPaths()[[1L]],
-                             num_workers = 1) {
-
-  plan <- get_install_plan(filenames, lib)
-  install_packages_internal(filenames, lib, num_workers, plan)
-}
-
+#' @param plan Package plan object, returned by pkgdepends
+#' @param lib Library directory to install to.
+#' @param num_workers Number of worker processes to use.
+#' @return Information about the installation process.
+#' 
 #' @importFrom rlang with_handlers exiting inplace
 #' @importFrom callr poll
-install_packages_internal <- function(filenames, lib, num_workers, plan) {
+#' @export
+
+install_package_plan <- function(plan, lib = .libPaths()[[1]],
+                                 num_workers = 1) {
 
   start <- Sys.time()
 
-  running <- character()
-  results <- list()
-  processes <- list()
+  config <- list(lib = lib, num_workers = num_workers)
+  state <- make_start_state(plan, config)
 
-  # Currently assumes the order of installation is not important
-  events <- get_events(list(plan = plan, processes = list(), results = list()), num_workers, lib)
-  while(running_processes(events)) {
-    for (output in get_output(events)) {
-      is_running <- grepl("^Building", strip_style(output$output))
-      running <- union(running, sub("^Building ", "", strip_style(output$output[is_running])))
-      finished <- output$output[!is_running]
+  withCallingHandlers({
 
-      if (length(finished) > 0 && nzchar(finished)) {
-
-        # remove installed from running
-        installed <- strip_style(finished)[grepl("^. Installed ", strip_style(finished))]
-        installed <- sub(". Installed ([^[:space:]]+).*", "\\1", installed)
-
-        running <- setdiff(running, installed)
-      }
+    ## Initialise one task for each worker
+    for (i in seq_len(state$config$num_workers)) {
+      ## TODO: update progress bar here
+      task <- select_next_task(state)
+      state <- start_task(state, task)
     }
-    events <- get_events(events, num_workers, lib)
-  }
 
-  structure(unlist(events$results, recursive = FALSE), class = "installation_results", elapsed = Sys.time() - start)
+    while (1) {
+      if (are_we_done(state)) break;
+      ## TODO: update progress bar here
+      events <- poll_workers(state)
+      state <- handle_events(state, events)
+      task  <- select_next_task(state)
+      state <- start_task(state, task)
+    }
+  }, error = function(e) kill_all_processes(state))
+
+  create_install_result(state)
 }
 
-install_packages_simple <- function(filenames, lib, metadata, vignettes) {
+make_start_state <- function(plan, config) {
 
-  start <- Sys.time()
+  ## We store the data about build and installation here
+  install_cols <- data.frame(
+    stringsAsFactors = FALSE,
+    build_done = plan$type == "installed" | plan$binary,
+    build_time = ifelse(plan$binary, 0, NA_real_),
+    build_error = I(rep_list(nrow(plan), list())),
+    build_stdout = I(rep_list(nrow(plan), character())),
+    build_stderr = I(rep_list(nrow(plan), character())),
+    install_done = plan$type == "installed",
+    install_time = ifelse(plan$type == "installed", 0, NA_real_),
+    install_error = I(rep_list(nrow(plan), list())),
+    install_stdout = I(rep_list(nrow(plan), character())),
+    install_stderr = I(rep_list(nrow(plan), character())),
+    worker_id = NA_character_
+  )
+  plan <- cbind(plan, install_cols)
 
-  res <- lapply(seq_along(filenames), function(idx) {
-    file <- filenames[idx]
-    meta <- metadata[[idx]]
-    vig <- vignettes[idx]
-    format_message <- inplace(function(x) cat(format(x)))
-    installed_path <- with_handlers(
-      pkginstall_installed = format_message,
-      pkginstall_built = format_message,
-      pkginstall_begin = format_message,
-      error = exiting(function(e) {
-        name <- basename(e$package %||% e$path %||% file)
-        cat(glue("{red_cross()} Failed {name}"))
-        stop(e)
-      }), {
-        install_package(file, lib = lib, metadata = meta, vignettes = vig)
-      })
-    installed_path
-  })
-
-  names(res) <- filenames
-  return(structure(res, class = "installation_results", elapsed = Sys.time() - start))
+  list(
+    plan = plan,
+    workers = list(),
+    config = config)
 }
 
-#' Install a local R package
-#'
-#' @param filename filename of package to install. Can be a source
-#' directory, source tarball or binary package.
-#' @param vignettes whether to (re)build the vignettes of the packages.
-#' It is ignored for binary packages.
-#' @inheritParams install_binary
-#' @inheritParams install_source
-#' @keywords internal
-install_package <- function(filename, lib, metadata, vignettes) {
-  if (is_binary_package(filename)) {
-    install_binary(filename, lib, metadata = metadata)
+are_we_done <- function(state) {
+  all(state$plan$install_done)
+}
+
+#' @importFrom callr poll
+
+poll_workers <- function(state) {
+  if (length(state$workers)) {
+    timeout <- get_timeout(state)
+    procs <- lapply(state$workers, "[[", "process")
+    res <- poll(procs, ms = timeout)
+    vapply(res, function(x) "ready" %in% x, logical(1))
+
   } else {
-    install_source(filename, lib, metadata = metadata, vignettes = vignettes)
+    logical()
   }
 }
 
-get_events <- function(events, num_workers, lib) {
-  done <- map_lgl(events$processes, function(x) !x$is_alive() && !x$is_incomplete_output() && !x$is_incomplete_error())
-  failed <- map_lgl(events$processes, function(x) !x$is_alive() && x$get_exit_status() != 0)
-  if (any(failed)) {
-    kill_all_processes(events$processes)
-    events$processes$get_result[which(failed)[[1]]]
+## TODO: No timeout currently
+
+get_timeout <- function(state) -1L
+
+handle_events <- function(state, events) {
+  for (i in which(events)) state <- handle_event(state, i)
+  state$workers <- drop_nulls(state$workers)
+  state
+}
+
+handle_event <- function(state, evidx) {
+  proc <- state$workers[[evidx]]$process
+
+  ## Read out stdout and stderr. If process is done, then read out all
+  if (proc$is_alive()) {
+    state$workers[[evidx]]$stdout <-
+      c(state$workers[[evidx]]$stdout, out <- proc$read_output(n = 10000))
+    state$workers[[evidx]]$stderr <-
+      c(state$workers[[evidx]]$stderr, err <- proc$read_error(n = 10000))
+  } else {
+    state$workers[[evidx]]$stdout <-
+      c(state$workers[[evidx]]$stdout, out <- proc$read_all_output())
+    state$workers[[evidx]]$stderr <-
+      c(state$workers[[evidx]]$stderr, err <- proc$read_all_error())
   }
-  results <- append(events$results, lapply(events$processes[done], function(x) x$get_result()))
-  processes <- events$processes[!done]
-  plan <- events$plan
 
-  # Removed installed packages from dependencies
-  installed <- unlist(lapply(results, function(x) basename(unlist(x))))
-  plan$dependencies <- lapply(plan$dependencies, setdiff, installed)
-  ready <- which(plan$binary | lengths(plan$dependencies) == 0)
-
-  i <- 1
-  while (i <= length(ready) && length(processes) < num_workers) {
-    # Distribute all binary packages to a single worker
-    # TODO: maybe distribute them to all workers?
-    is_binary <- plan$binary
-    if (any(is_binary)) {
-      processes[[length(processes) + 1]] <- new_install_packages_process(
-        plan$file[is_binary], plan$metadata[is_binary],
-        plan$vignettes[is_binary], lib)
-      binary_pkgs <- plan$package[is_binary]
-      plan <- plan[!is_binary, ]
-      ready <- which(lengths(plan$dependencies) == 0)
-    } else {
-      processes[[length(processes) + 1]] <- new_install_packages_process(
-        plan$file[[ready[[i]]]], plan$metadata[ready[i]],
-        plan$vignettes[ready[i]], lib)
-      i <- i + 1
-    }
+  ## If there is still output, then wait a bit more
+  if (proc$is_incomplete_output() || proc$is_incomplete_error()) {
+    return(state)
   }
-  plan <- remove_rows(plan, ready[seq_len(i - 1)])
 
-  list(plan = plan, processes = processes, results = results)
+  ## Otherwise we are done. Remove worker
+  worker <- state$workers[[evidx]]
+  state$workers[evidx] <- list(NULL)
+
+  ## Post-process, this will throw on error
+  if (is.function(proc$get_result)) proc$get_result()
+
+  ## Cut stdout and stderr to lines
+  worker$stdout <- cut_into_lines(worker$stdout)
+  worker$stderr <- cut_into_lines(worker$stderr)
+
+  ## Record what was done
+  stop_task(state, worker)
 }
 
+select_next_task <- function(state) {
 
-#' @importFrom pkgdepends remotes
-get_install_plan <- function(filenames, library) {
-  r <- remotes$new(glue("local::{filenames}"), library = library)
-  r$solve()
-  r$download_solution()
-  plan <- r$get_install_plan()
+  ## Cannot run more workers?
+  if (length(state$workers) >= state$config$num_workers) {
+    return(task("idle"))
+  }
 
-  installed <- plan$type == "installed"
+  ## Can we select a source package build? Do that.
+  can_build <- which(
+    ! state$plan$build_done &
+    vapply(state$plan$dependencies, length, integer(1)) == 0 &
+    is.na(state$plan$worker_id))
 
-  # Remove installed dependencies from the dependency lists.
-  plan$dependencies <- lapply(plan$dependencies, setdiff, plan$package[installed])
+  if (any(can_build)) {
+    pkgidx <- can_build[1]
+    return(task("build", pkgidx = pkgidx))
+  }
 
-  # Return uninstalled packages
-  plan[!installed, ]
+  ## TODO: can we select a binary that is depended on by a source package?
+
+  ## Otherwise select a binary if there is one
+  can_install <- which(
+    state$plan$build_done &
+    ! state$plan$install_done &
+    is.na(state$plan$worker_id))
+
+  if (any(can_install)) {
+    pkgidx <- can_install[1]
+    return(task("install", pkgidx = pkgidx))
+  }
+
+  ## Looks like nothing else to do
+  task("idle")
 }
 
-get_output <- function(x) {
-  res <- poll(x$processes, -1)
-  idx <- which(vapply(res, function(x) any(x == "ready"), logical(1)))
-  lapply(idx,
-    function(i) {
-      list(
-        output = remove_spaces(x$processes[[i]]$read_output_lines()),
-        error = x$processes[[i]]$read_error_lines(),
-        index = i)
-    })
+task <- function(name, ...) {
+  list(name = name, args = list(...))
 }
 
-running_processes <- function(x) {
-  length(x$processes) > 0
+start_task <- function(state, task) {
+  if (task$name == "idle") {
+    state
+
+  } else if (task$name == "build") {
+    start_task_build(state, task)
+
+  } else if (task$name == "install") {
+    start_task_install(state, task)
+  }
 }
 
-kill_all_processes <- function(events) {
-  for (proc in events$processes) {
+get_worker_id <- (function() {
+  id <- 0
+  function() {
+    id <<- id + 1
+    as.character(id)
+  }
+})()
+
+#' @importFrom pkgbuild pkgbuild_process
+
+start_task_build <- function(state, task,
+                             dummy = FALSE, dummy_args = list()) {
+  pkgidx <- task$args$pkgidx
+  path <- state$plan$file[pkgidx]
+  vignettes <- state$plan$vignettes[pkgidx]
+  needs_compilation <- !identical(state$plan$needs_compilation[pkgidx], "no")
+  tmp_dir <- create_temp_dir()
+  lib <- state$config$lib
+
+  px <- if (dummy) {
+    do.call(make_dummy_worker_process, dummy_args)
+
+  } else {
+    pkgbuild_process$new(
+      path, tmp_dir, binary = TRUE, vignettes = vignettes,
+      needs_compilation = needs_compilation, compile_attributes = FALSE,
+      args = glue("--library={lib}"))
+  }
+
+  worker <- list(id = get_worker_id(), task = task, process = px,
+                 stdout = character(), stderr = character(), dummy = dummy)
+  state$workers <- c(
+    state$workers, structure(list(worker), names = worker$id))
+  state$plan$worker_id[pkgidx] <- worker$id
+  state
+}
+
+start_task_install <- function(state, task,
+                               dummy = FALSE, dummy_args = list()) {
+  pkgidx <- task$args$pkgidx
+  filename <- state$plan$file[pkgidx]
+  lib <- state$config$lib
+  metadata <- state$plan$metadata[[pkgidx]]
+
+  px <- if (dummy) {
+    do.call(make_dummy_worker_process, dummy_args)
+
+  } else {
+    make_install_process(filename, lib = lib, metadata = metadata)
+  }
+
+  worker <- list(
+    id = get_worker_id(), task = task, process = px,
+    stdout = character(), stderr = character(), dummy = dummy)
+
+  state$workers <- c(
+    state$workers, structure(list(worker), names = worker$id))
+  state$plan$worker_id[pkgidx] <- worker$id
+  state
+}
+
+stop_task <- function(state, worker) {
+  if (worker$task$name == "build") {
+    stop_task_build(state, worker)
+
+  } else if (worker$task$name == "install") {
+    stop_task_install(state, worker)
+
+  } else {
+    stop("Unknown task, internal error")
+  }
+}
+
+stop_task_build <- function(state, worker) {
+
+  ## TODO: make sure exit status is non-zero on build error!
+  success <- worker$process$get_exit_status() == 0
+
+  pkgidx <- worker$task$args$pkgidx
+
+  ## Need to save the name of the built package
+  if (success && !worker$dummy) {
+    state$plan$file[pkgidx] <- worker$process$get_built_file()
+  }
+
+  pkg <- state$plan$package[pkgidx]
+  state$plan$build_done[[pkgidx]] <- TRUE
+  ## TODO: build time
+  state$plan$build_error[[pkgidx]] <- ! success
+  state$plan$build_stdout[[pkgidx]] <- worker$stdout
+  state$plan$build_stderr[[pkgidx]] <- worker$stderr
+  state$plan$worker_id[[pkgidx]] <- NA_character_
+
+  if (!success) {
+    abort("Failed to build source package {pkg}.")
+  }
+
+  state
+}
+
+stop_task_install <- function(state, worker) {
+
+  ## TODO: make sure the install status is non-zero on exit
+  success <- worker$process$get_exit_status() == 0
+
+  pkgidx <- worker$task$args$pkgidx
+  pkg <- state$plan$package[pkgidx]
+  state$plan$install_done[[pkgidx]] <- TRUE
+  ## TODO: install time
+  state$plan$install_error[[pkgidx]] <- ! success
+  state$plan$install_stdout[[pkgidx]] <- worker$stdout
+  state$plan$install_stderr[[pkgidx]] <- worker$stderr
+  state$plan$worker_id[[pkgidx]] <- NA_character_
+
+  if (!success) {
+    abort("Failed to install binary package {pkg}.")
+  }
+
+  ## Need to remove from the dependency list
+  state$plan$dependencies <- lapply(state$plan$dependencies, setdiff, pkg)
+
+  state
+}
+
+create_install_result <-  function(state) {
+  result <- state$plan
+  class(result) <- c("pkginstall_result", class(result))
+  result
+}
+
+kill_all_processes <- function(state) {
+  alive <- FALSE
+  for (i in seq_along(state$workers)) {
+    proc <- state$workers[[i]]$process
     proc$kill(tools::SIGINT)
+    alive <- alive || proc$is_alive()
   }
-}
 
-remove_spaces <- function(x) {
-  x <- x[!grepl("^[[:space:]]*$", x)]
-}
-
-#' @importFrom crayon make_style strip_style
-greyish <- function() make_style("darkgrey")
-
-green_tick <- function() green(symbol$tick)
-red_cross <- function() red(symbol$cross)
-
-#' @importFrom crayon cyan reset green
-#' @importFrom prettyunits pretty_dt
-#' @importFrom clisymbols symbol
-#' @export
-format.pkginstall_installed <- function(x, ...) {
-  glue("{green_tick()} Installed {greyish()}{x$package} {cyan}({pretty_dt(x$time)}){reset}")
-}
-
-#' @export
-format.pkginstall_built <- function(x, ...) {
-  glue("{green_tick()} Built {greyish()}{x$package} {cyan}({pretty_dt(x$time)}){reset}")
-}
-
-#' @export
-format.pkginstall_begin <- function(x, ...) {
-  glue("Building {greyish()}{x$package}{reset}")
-}
-
-#' @importFrom crayon blue reset
-#' @importFrom clisymbols symbol
-#' @export
-print.installation_results <- function(x, ...) {
-  time <- cyan("(", pretty_dt(attr(x, 'elapsed')), ")", sep = "")
-  if (length(x) > 1) {
-    cat(glue("
-        Installed {blue}{sum(map_int(x, length))}{reset} packages {time}.
-        "))
-  } else {
-    cat(glue("
-        Installed {blue}{basename(names(x))}{reset} {time}.
-        "))
+  if (alive) {
+    for (i in seq_along(state$workers)) {
+      proc <- state$workers[[i]]$process
+      proc$wait(200)
+      proc$kill()
+    }
   }
-  invisible(x)
-}
-
-is_binary_package <- function(filename) {
-  tryCatch({
-    verify_binary(filename)
-    TRUE
-  }, error = function(e) FALSE)
-}
-
-new_install_packages_process <-  function(file, metadata, vignettes, lib) {
-  callr::r_bg(
-    args = list(
-      filenames = file, lib = lib, metadata = metadata,
-      vignettes = vignettes, crayon.enabled = crayon::has_color(),
-      crayon.colors = crayon::num_colors()),
-
-    function(filenames, metadata, vignettes, lib,
-             crayon.enabled, crayon.colors) {
-      options("crayon.enabled" = crayon.enabled, "crayon.colors" = crayon.colors)
-      get("install_packages_simple", asNamespace("pkginstall"))(
-        filenames, lib = lib, metadata = metadata, vignettes = vignettes)
-    })
-}
-
-remove_rows <- function(x, i) {
-  if (length(i) == 0) {
-    return(x)
-  }
-  x[-1 * i, ]
 }

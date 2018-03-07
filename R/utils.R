@@ -91,8 +91,6 @@ map_chr <- get("map_chr", asNamespace("rlang"))
 
 map_int <- get("map_int", asNamespace("rlang"))
 
-lengths <- function(x) vapply(x, length, integer(1))
-
 #' @importFrom rlang %||%
 is_verbose <- function() {
   getOption("pkg.show_progress") %||% interactive()
@@ -120,6 +118,7 @@ drop_nulls <- function(x) {
 make_dummy_worker_process <- function(n_iter = 10, sleep = 1, status = 0) {
   r_process$new(r_process_options(
     func = function(n_iter, sleep, status) {
+      # nocov start
       for (i in seq_len(n_iter)) {
         cat("out ", i, "\n", sep = "")
         message("err ", i)
@@ -130,6 +129,7 @@ make_dummy_worker_process <- function(n_iter = 10, sleep = 1, status = 0) {
         rm(list = ".Last", envir = .GlobalEnv)
         quit(save = "no", status = status)
       }
+      # nocov end
     },
     args = list(n_iter = n_iter, sleep = sleep, status = status)
   ))

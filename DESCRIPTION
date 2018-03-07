@@ -23,6 +23,7 @@ Imports:
     withr
 Suggests: 
     covr,
+    mockery,
     pkgdepends (>= 0.0.0.9001),
     testthat
 ByteCompile: true

@@ -274,6 +274,7 @@ test_that("kill_all_processes that catch/ignore SIGINT", {
   sh <- "trap '&>2 echo \"Hold on\"' INT
     for ((n=5; n; n--))
     do
+      echo going
       sleep 1
     done"
 
@@ -282,10 +283,14 @@ test_that("kill_all_processes that catch/ignore SIGINT", {
 
   state <- list(workers = list(list(process = px)))
 
+  ## Need to wait until the shell starts and traps SIGINT
+  px$poll_io(2000)
+
   tic <- Sys.time()
   kill_all_processes(state)
   expect_true(Sys.time() - tic > as.difftime(0.2, units = "secs"))
   expect_false(px$is_alive())
+
   ## We can't get the output of the signal handler, because SIGKILL
   ## does not ensure emptying the buffers....
 

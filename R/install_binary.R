@@ -13,6 +13,11 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
 
   now <- Sys.time()
 
+  stopifnot(
+    is_string(filename), file.exists(filename),
+    is_string(lib),
+    all_named(metadata))
+
   lib_cache <- library_cache(lib)
   mkdirp(pkg_cache <- tempfile(tmpdir = lib_cache))
   on.exit(unlink(pkg_cache, recursive = TRUE), add = TRUE)

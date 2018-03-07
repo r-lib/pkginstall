@@ -15,6 +15,16 @@ install_package_plan <- function(plan, lib = .libPaths()[[1]],
 
   start <- Sys.time()
 
+  required_columns <- c(
+    "type", "binary", "dependencies", "file", "vignettes",
+    "needs_compilation", "metadata", "package")
+  stopifnot(
+    inherits(plan, "data.frame"),
+    all(required_columns %in% colnames(plan)),
+    is_string(lib),
+    is_count(num_workers, min = 1L)
+  )
+
   config <- list(lib = lib, num_workers = num_workers)
   state <- make_start_state(plan, config)
 

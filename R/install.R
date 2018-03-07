@@ -30,6 +30,7 @@ install_package_plan <- function(plan, lib = .libPaths()[[1]],
     while (1) {
       if (are_we_done(state)) break;
       ## TODO: update progress bar here
+
       events <- poll_workers(state)
       state <- handle_events(state, events)
       task  <- select_next_task(state)

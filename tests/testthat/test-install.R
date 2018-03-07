@@ -16,11 +16,12 @@ describe("install_packages", {
     unlink(pkg)
   })
 
-  withr::with_options(
-    list(pkg.show_progress = FALSE),
+  withr::with_options(list(pkg.show_progress = FALSE), {
+    plan <- pkgdepends::make_install_plan(
+      paste0("local::", pkg), lib = libpath)
     expect_error_free(
-      install_packages("foo_0.0.0.9000.tar.gz", lib = libpath))
-  )
+      install_package_plan(plan, lib = libpath))
+  })
 
   expect_error_free(
     library("foo", lib.loc = libpath))

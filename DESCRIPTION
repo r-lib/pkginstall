@@ -14,22 +14,16 @@ Depends:
 Imports: 
     archive,
     callr (>= 2.0.2.9001),
-    clisymbols,
-    crayon,
     desc,
     filelock,
     glue,
-    pkgbuild,
-    prettyunits,
+    pkgbuild (>= 0.0.0.9001),
     R6,
-    rematch2,
     rlang,
-    withr,
-    progress,
-    pkgdepends
+    withr
 Suggests: 
-    callr,
     covr,
+    pkgdepends (>= 0.0.0.9001),
     testthat
 ByteCompile: true
 Encoding: UTF-8
@@ -39,7 +33,7 @@ Remotes:
     jimhester/archive,
     r-lib/withr,
     tidyverse/glue,
-    r-lib/pkgbuild,
+    r-lib/pkgbuild@feature/build-tar-gz,
     r-lib/desc,
     r-lib/progress,
     r-lib/pkgdepends

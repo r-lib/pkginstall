@@ -140,3 +140,19 @@ test_that("make_untar_process", {
   expect_equal(px$get_exit_status(), 0)
   expect_true(file.exists(file.path(tmp, "pkg", "DESCRIPTION")))
 })
+
+test_that("make_untar_process, internal tar", {
+
+  mockery::stub(make_untar_process, "need_internal_tar", TRUE)
+
+  tarfile <- system.file(package = .packageName, "tools", "pkg_1.0.0.tgz")
+  mkdirp(tmp <- tempfile())
+  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+
+  px <- make_untar_process(tarfile, exdir = tmp)
+  px$wait(5000)
+  px$kill()
+
+  expect_equal(px$get_exit_status(), 0)
+  expect_true(file.exists(file.path(tmp, "pkg", "DESCRIPTION")))
+})

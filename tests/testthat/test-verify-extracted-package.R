@@ -55,3 +55,28 @@ describe("verify_extracted_package", {
       "'.*test7[.]tgz' is not a valid binary, no 'Built' entry in 'test7/DESCRIPTION'")
   })
 })
+
+test_that("verify_extrancted_package errors", {
+
+  pkg_dir <- file.path("fixtures", "packages")
+
+  expect_error(
+    verify_extracted_package("bad1", file.path(pkg_dir, "bad1")),
+    "single directory"
+  )
+
+  expect_error(
+    verify_extracted_package("bad2", file.path(pkg_dir, "bad2")),
+    "invalid"
+  )
+
+  expect_error(
+    verify_extracted_package("bad3", file.path(pkg_dir, "bad3")),
+    "Package"
+  )
+
+  expect_error(
+    verify_extracted_package("bad4", file.path(pkg_dir, "bad4")),
+    "package name mismatch"
+  )
+})

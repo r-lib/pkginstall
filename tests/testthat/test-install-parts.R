@@ -221,6 +221,20 @@ test_that("select_next_task", {
     task("idle"))
 })
 
+test_that("start_task", {
+  expect_error(
+    start_task(list(), task("foobar")),
+    "Unknown task"
+  )
+})
+
+test_that("stop_task", {
+  expect_error(
+    stop_task(list(), list(task = task("foobar"))),
+    "Unknown task"
+  )
+})
+
 test_that("get_worker_id", {
   expect_true(get_worker_id() != get_worker_id())
 })
@@ -249,4 +263,31 @@ test_that("kill_all_processes", {
   p1$kill()
   p2$kill()
   p3$kill()
+})
+
+test_that("kill_all_processes that catch/ignore SIGINT", {
+
+  skip_on_cran()
+  skip_on_os("windows")
+  if (Sys.which("bash") == "") skip("Needs 'bash'")
+
+  sh <- "trap '&>2 echo \"Hold on\"' INT
+    for ((n=5; n; n--))
+    do
+      sleep 1
+    done"
+
+  px <- callr::process$new("bash", c("-c", sh), stdout = "|", stderr = "|")
+  expect_true(px$is_alive())
+
+  state <- list(workers = list(list(process = px)))
+
+  tic <- Sys.time()
+  kill_all_processes(state)
+  expect_true(Sys.time() - tic > as.difftime(0.2, units = "secs"))
+  expect_false(px$is_alive())
+  ## We can't get the output of the signal handler, because SIGKILL
+  ## does not ensure emptying the buffers....
+
+  px$kill()
 })

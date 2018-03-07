@@ -34,6 +34,7 @@ runzip_init <- function(self, private, super, zipfile, files, exdir,
 
   process_options <- r_process_options()
   process_options$func <- function(options) {
+    # nocov start
     ret <- utils::unzip(
       zipfile = options$zipfile,
       files = options$files,
@@ -44,6 +45,7 @@ runzip_init <- function(self, private, super, zipfile, files, exdir,
     )
 
     if (!is.null(options$post_process)) options$post_process() else ret
+    # nocov end
   }
   process_options$args <- list(options = options)
   super$initialize(process_options)

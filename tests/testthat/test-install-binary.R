@@ -62,3 +62,25 @@ test_that("install_binary works for simultaneous installs", {
     expect_identical(processes[[i]]$get_result(), file.path(libpath, "foo"))
   }
 })
+
+test_that("install_binary errors", {
+  tmp <- tempfile()
+  on.exit(unlink(tmp), add = TRUE)
+  cat("foobar\n", file = tmp)
+
+  expect_error(
+    install_binary(tmp, lib = tempdir()),
+    "invalid archive"
+  )
+})
+
+test_that("make_install_process error", {
+  tmp <- tempfile()
+  on.exit(unlink(tmp), add = TRUE)
+  cat("foobar\n", file = tmp)
+
+  expect_error(
+    make_install_process(tmp, lib = tempdir()),
+    "Cannot extract"
+  )
+})

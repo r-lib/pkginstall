@@ -178,6 +178,9 @@ start_task <- function(state, task) {
 
   } else if (task$name == "install") {
     start_task_install(state, task)
+
+  } else {
+    stop("Unknown task, internal error")
   }
 }
 
@@ -315,7 +318,7 @@ kill_all_processes <- function(state) {
   alive <- FALSE
   for (i in seq_along(state$workers)) {
     proc <- state$workers[[i]]$process
-    proc$kill(tools::SIGINT)
+    proc$signal(tools::SIGINT)
     alive <- alive || proc$is_alive()
   }
 

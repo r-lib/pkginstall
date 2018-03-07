@@ -34,6 +34,7 @@ Remotes:
     r-lib/withr,
     tidyverse/glue,
     r-lib/pkgbuild@feature/build-tar-gz,
+    r-lib/callr,
     r-lib/desc,
     r-lib/progress,
     r-lib/pkgdepends

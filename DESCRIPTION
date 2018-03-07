@@ -34,10 +34,10 @@ Remotes:
     jimhester/archive,
     r-lib/withr,
     tidyverse/glue,
-    r-lib/pkgbuild@feature/build-tar-gz,
     r-lib/callr,
     r-lib/desc,
     r-lib/progress,
-    r-lib/pkgdepends
+    r-lib/pkgdepends,
+    r-lib/pkgbuild@feature/build-tar-gz
 RoxygenNote: 6.0.1
 Roxygen: list(markdown = TRUE)

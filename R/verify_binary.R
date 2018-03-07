@@ -10,6 +10,8 @@
 #' @export
 verify_binary <- function(filename) {
 
+  stopifnot(is_string(filename), file.exists(filename))
+
   tarball <- archive(filename)
 
   pkg <- get_pkg_name(tarball)

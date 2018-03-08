@@ -121,7 +121,8 @@ handle_event <- function(state, evidx) {
   }
 
   ## If there is still output, then wait a bit more
-  if (proc$is_incomplete_output() || proc$is_incomplete_error()) {
+  if (proc$is_alive() ||
+      proc$is_incomplete_output() || proc$is_incomplete_error()) {
     return(state)
   }
 

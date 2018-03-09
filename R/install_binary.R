@@ -4,7 +4,6 @@
 #' @param lib library to install packages into
 #' @param metadata Named character vector of metadata entries to be added
 #'   to the \code{DESCRIPTION} after installation.
-#' @importFrom archive archive archive_extract
 #' @importFrom filelock lock unlock
 #' @importFrom rlang cnd cnd_signal
 #' @export
@@ -69,14 +68,10 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
 }
 
 
-get_pkg_name <- function(tarball) {
-  if (!inherits(tarball, "archive")) {
-    tarball <- archive(tarball)
-  }
+get_pkg_name <- function(filename) {
 
-  filename <- attr(tarball, "path")
-
-  description_path <- grep("DESCRIPTION$", tarball$path, value = TRUE)
+  files <- archive_files(filename)
+  description_path <- grep("DESCRIPTION$", files, value = TRUE)
 
   # If there is more than one DESCRIPTION in the tarball use the shortest one,
   # which should always be the top level DESCRIPTION file.

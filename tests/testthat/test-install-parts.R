@@ -260,6 +260,9 @@ test_that("get_worker_id", {
 })
 
 test_that("kill_all_processes", {
+
+  skip_on_os("windows")
+
   p1 <- callr::process$new("true", stdout = "|")
   on.exit(p1$kill(), add = TRUE)
   p2 <- callr::process$new("true", stdout = "|")

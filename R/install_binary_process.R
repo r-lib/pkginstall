@@ -26,7 +26,8 @@ make_install_process <- function(filename, lib = .libPaths()[[1L]],
     make_untar_process(filename, exdir = pkg_cache, post_process = ppfun)
   }
 
-  reg.finalizer(p, function(...) unlink(pkg_cache, recursive = TRUE), TRUE)
+  reg.finalizer(p, function(...) unlink(pkg_cache, recursive = TRUE),
+                onexit = TRUE)
 
   p
 }

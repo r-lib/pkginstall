@@ -48,3 +48,39 @@ expect_error_free <- function(...) {
 if (is_loaded("foo")) {
   pkgload::unload("foo")
 }
+
+#' @importFrom callr r_process r_process_options
+
+dummy_worker_process <- R6Class(
+  "dummy_worker_process",
+  inherit = callr::r_process,
+  public = list(
+    initialize = function(...) {
+      super$initialize(...)
+    },
+    get_built_file = function() NA_character_
+  )
+)
+
+make_dummy_worker_process <- function(n_iter = 10, sleep = 1, status = 0) {
+  n_iter; sleep; status
+  function(...) {
+    dummy_worker_process$new(r_process_options(
+      func = function(n_iter, sleep, status) {
+                                        # nocov start
+        for (i in seq_len(n_iter)) {
+          cat("out ", i, "\n", sep = "")
+          message("err ", i)
+          Sys.sleep(sleep)
+        }
+        status
+        .GlobalEnv$.Last <- function() {
+          rm(list = ".Last", envir = .GlobalEnv)
+          quit(save = "no", status = status)
+        }
+                                        # nocov end
+      },
+      args = list(n_iter = n_iter, sleep = sleep, status = status)
+      ))
+  }
+}

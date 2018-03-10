@@ -109,30 +109,8 @@ rep_list <- function(n, expr) {
 }
 
 drop_nulls <- function(x) {
-  is_null <- vapply(x, is.null, logical(1))
+  is_null <- map_lgl(x, is.null)
   x[!is_null]
-}
-
-#' @importFrom callr r_process r_process_options
-
-make_dummy_worker_process <- function(n_iter = 10, sleep = 1, status = 0) {
-  r_process$new(r_process_options(
-    func = function(n_iter, sleep, status) {
-      # nocov start
-      for (i in seq_len(n_iter)) {
-        cat("out ", i, "\n", sep = "")
-        message("err ", i)
-        Sys.sleep(sleep)
-      }
-      status
-      .GlobalEnv$.Last <- function() {
-        rm(list = ".Last", envir = .GlobalEnv)
-        quit(save = "no", status = status)
-      }
-      # nocov end
-    },
-    args = list(n_iter = n_iter, sleep = sleep, status = status)
-  ))
 }
 
 cut_into_lines <- function(x) {

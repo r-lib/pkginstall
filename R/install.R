@@ -227,6 +227,7 @@ start_task_build <- function(state, task) {
   state$workers <- c(
     state$workers, structure(list(worker), names = worker$id))
   state$plan$worker_id[pkgidx] <- worker$id
+  state$plan$build_time[[pkgidx]] <- Sys.time()
   state
 }
 
@@ -244,6 +245,7 @@ start_task_install <- function(state, task) {
   state$workers <- c(
     state$workers, structure(list(worker), names = worker$id))
   state$plan$worker_id[pkgidx] <- worker$id
+  state$plan$install_time[[pkgidx]] <- Sys.time()
   state
 }
 
@@ -273,7 +275,8 @@ stop_task_build <- function(state, worker) {
 
   pkg <- state$plan$package[pkgidx]
   state$plan$build_done[[pkgidx]] <- TRUE
-  ## TODO: build time
+  state$plan$build_time[[pkgidx]] <-
+    Sys.time() - state$plan$build_time[[pkgidx]]
   state$plan$build_error[[pkgidx]] <- ! success
   state$plan$build_stdout[[pkgidx]] <- worker$stdout
   state$plan$build_stderr[[pkgidx]] <- worker$stderr
@@ -294,7 +297,8 @@ stop_task_install <- function(state, worker) {
   pkgidx <- worker$task$args$pkgidx
   pkg <- state$plan$package[pkgidx]
   state$plan$install_done[[pkgidx]] <- TRUE
-  ## TODO: install time
+  state$plan$install_time[[pkgidx]] <-
+    Sys.time() - state$plan$install_time[[pkgidx]]
   state$plan$install_error[[pkgidx]] <- ! success
   state$plan$install_stdout[[pkgidx]] <- worker$stdout
   state$plan$install_stderr[[pkgidx]] <- worker$stderr

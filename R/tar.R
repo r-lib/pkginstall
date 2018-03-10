@@ -40,7 +40,7 @@ make_untar_process <- function(tarfile, files = NULL, exdir = ".",
 #' @return Whether we need to use the internal tar implementation.
 #' @keywords internal
 
-need_internal_tar <- (function() {
+need_internal_tar <- local({
   internal <- NULL
   function() {
     if (!is.null(internal)) return(internal)
@@ -54,7 +54,7 @@ need_internal_tar <- (function() {
       !file.exists(file.path(tmp, "pkg", "DESCRIPTION"))
     internal
   }
-})()
+})
 
 #' @importFrom R6 R6Class
 

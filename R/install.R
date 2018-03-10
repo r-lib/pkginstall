@@ -37,7 +37,7 @@ install_package_plan <- function(plan, lib = .libPaths()[[1]],
       state <- start_task(state, task)
     }
 
-    while (1) {
+    repeat {
       if (are_we_done(state)) break;
       ## TODO: update progress bar here
 
@@ -87,7 +87,7 @@ poll_workers <- function(state) {
     timeout <- get_timeout(state)
     procs <- lapply(state$workers, "[[", "process")
     res <- poll(procs, ms = timeout)
-    vapply(res, function(x) "ready" %in% x, logical(1))
+    map_lgl(res, function(x) "ready" %in% x)
 
   } else {
     logical()
@@ -151,7 +151,7 @@ select_next_task <- function(state) {
   ## Can we select a source package build? Do that.
   can_build <- which(
     ! state$plan$build_done &
-    vapply(state$plan$dependencies, length, integer(1)) == 0 &
+    map_int(state$plan$dependencies, length) == 0 &
     is.na(state$plan$worker_id))
 
   if (any(can_build)) {
@@ -203,10 +203,17 @@ get_worker_id <- (function() {
   }
 })()
 
+make_build_process <- function(path, tmp_dir, lib, vignettes,
+                               needs_compilation) {
+  pkgbuild_process$new(
+    path, tmp_dir, binary = TRUE, vignettes = vignettes,
+    needs_compilation = needs_compilation, compile_attributes = FALSE,
+    args = glue("--library={lib}"))
+}
+
 #' @importFrom pkgbuild pkgbuild_process
 
-start_task_build <- function(state, task,
-                             dummy = FALSE, dummy_args = list()) {
+start_task_build <- function(state, task) {
   pkgidx <- task$args$pkgidx
   path <- state$plan$file[pkgidx]
   vignettes <- state$plan$vignettes[pkgidx]
@@ -214,41 +221,25 @@ start_task_build <- function(state, task,
   tmp_dir <- create_temp_dir()
   lib <- state$config$lib
 
-  px <- if (dummy) {
-    do.call(make_dummy_worker_process, dummy_args)
-
-  } else {
-    pkgbuild_process$new(
-      path, tmp_dir, binary = TRUE, vignettes = vignettes,
-      needs_compilation = needs_compilation, compile_attributes = FALSE,
-      args = glue("--library={lib}"))
-  }
-
+  px <- make_build_process(path, tmp_dir, lib, vignettes, needs_compilation)
   worker <- list(id = get_worker_id(), task = task, process = px,
-                 stdout = character(), stderr = character(), dummy = dummy)
+                 stdout = character(), stderr = character())
   state$workers <- c(
     state$workers, structure(list(worker), names = worker$id))
   state$plan$worker_id[pkgidx] <- worker$id
   state
 }
 
-start_task_install <- function(state, task,
-                               dummy = FALSE, dummy_args = list()) {
+start_task_install <- function(state, task) {
   pkgidx <- task$args$pkgidx
   filename <- state$plan$file[pkgidx]
   lib <- state$config$lib
   metadata <- state$plan$metadata[[pkgidx]]
 
-  px <- if (dummy) {
-    do.call(make_dummy_worker_process, dummy_args)
-
-  } else {
-    make_install_process(filename, lib = lib, metadata = metadata)
-  }
-
+  px <- make_install_process(filename, lib = lib, metadata = metadata)
   worker <- list(
     id = get_worker_id(), task = task, process = px,
-    stdout = character(), stderr = character(), dummy = dummy)
+    stdout = character(), stderr = character())
 
   state$workers <- c(
     state$workers, structure(list(worker), names = worker$id))
@@ -276,7 +267,7 @@ stop_task_build <- function(state, worker) {
   pkgidx <- worker$task$args$pkgidx
 
   ## Need to save the name of the built package
-  if (success && !worker$dummy) {
+  if (success) {
     state$plan$file[pkgidx] <- worker$process$get_built_file()
   }
 

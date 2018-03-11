@@ -5,7 +5,7 @@
 #' @param lib Library directory to install to.
 #' @param num_workers Number of worker processes to use.
 #' @return Information about the installation process.
-#' 
+#'
 #' @importFrom rlang with_handlers exiting inplace
 #' @importFrom callr poll
 #' @export
@@ -57,12 +57,12 @@ make_start_state <- function(plan, config) {
   install_cols <- data.frame(
     stringsAsFactors = FALSE,
     build_done = plan$type == "installed" | plan$binary,
-    build_time = ifelse(plan$binary, 0, NA_real_),
+    build_time = I(rep_list(nrow(plan), as.POSIXct(NA))),
     build_error = I(rep_list(nrow(plan), list())),
     build_stdout = I(rep_list(nrow(plan), character())),
     build_stderr = I(rep_list(nrow(plan), character())),
     install_done = plan$type == "installed",
-    install_time = ifelse(plan$type == "installed", 0, NA_real_),
+    install_time = I(rep_list(nrow(plan), as.POSIXct(NA))),
     install_error = I(rep_list(nrow(plan), list())),
     install_stdout = I(rep_list(nrow(plan), character())),
     install_stderr = I(rep_list(nrow(plan), character())),
@@ -221,6 +221,10 @@ start_task_build <- function(state, task) {
   tmp_dir <- create_temp_dir()
   lib <- state$config$lib
 
+  pkg <- state$plan$package[pkgidx]
+  version <- state$plan$version[pkgidx]
+  alert("info", "Building {pkg {pkg}} {version {version}}")
+
   px <- make_build_process(path, tmp_dir, lib, vignettes, needs_compilation)
   worker <- list(id = get_worker_id(), task = task, process = px,
                  stdout = character(), stderr = character())
@@ -261,22 +265,31 @@ stop_task <- function(state, worker) {
   }
 }
 
+#' @importFrom prettyunits pretty_sec
+
 stop_task_build <- function(state, worker) {
 
   ## TODO: make sure exit status is non-zero on build error!
   success <- worker$process$get_exit_status() == 0
 
   pkgidx <- worker$task$args$pkgidx
+  pkg <- state$plan$package[pkgidx]
+  version <- state$plan$version[pkgidx]
+  time <- Sys.time() - state$plan$build_time[[pkgidx]]
+  ptime <- pretty_sec(as.numeric(time, units = "secs"))
 
-  ## Need to save the name of the built package
   if (success) {
+    alert("success", "Built {pkg {pkg}} {version {version}} \\
+           {timestamp {ptime}}")
+    ## Need to save the name of the built package
     state$plan$file[pkgidx] <- worker$process$get_built_file()
+  } else {
+    alert("danger", "Failed to build {pkg {pkg}} \\
+           {version {version}} {timestamp {ptime}}")
   }
 
-  pkg <- state$plan$package[pkgidx]
   state$plan$build_done[[pkgidx]] <- TRUE
-  state$plan$build_time[[pkgidx]] <-
-    Sys.time() - state$plan$build_time[[pkgidx]]
+  state$plan$build_time[[pkgidx]] <- time
   state$plan$build_error[[pkgidx]] <- ! success
   state$plan$build_stdout[[pkgidx]] <- worker$stdout
   state$plan$build_stderr[[pkgidx]] <- worker$stderr
@@ -289,6 +302,8 @@ stop_task_build <- function(state, worker) {
   state
 }
 
+#' @importFrom prettyunits pretty_sec
+
 stop_task_install <- function(state, worker) {
 
   ## TODO: make sure the install status is non-zero on exit
@@ -296,9 +311,19 @@ stop_task_install <- function(state, worker) {
 
   pkgidx <- worker$task$args$pkgidx
   pkg <- state$plan$package[pkgidx]
+  version <- state$plan$version[pkgidx]
+  time <- Sys.time() - state$plan$install_time[[pkgidx]]
+  ptime <- pretty_sec(as.numeric(time, units = "secs"))
+
+  if (success) {
+    alert("success", "Installed {pkg {pkg}} \\
+             {version {version}} {timestamp {ptime}}")
+  } else {
+    alert("danger", "Failed to install  {pkg pkg}} {version {version}}")
+  }
+
   state$plan$install_done[[pkgidx]] <- TRUE
-  state$plan$install_time[[pkgidx]] <-
-    Sys.time() - state$plan$install_time[[pkgidx]]
+  state$plan$install_time[[pkgidx]] <- time
   state$plan$install_error[[pkgidx]] <- ! success
   state$plan$install_stdout[[pkgidx]] <- worker$stdout
   state$plan$install_stderr[[pkgidx]] <- worker$stderr
@@ -333,8 +358,8 @@ print.pkginstall_result <- function(x, ...) {
   if (noupd) cat("Not updated:", noupd, "\n", sep = "")
   if (curr)  cat("Current: ",    curr,  "\n", sep = "")
 
-  build_time <- sum(x$build_time, na.rm = TRUE)
-  inst_time <- sum(x$install_time, na.rm = TRUE)
+  build_time <- sum(unlist(x$build_time), na.rm = TRUE)
+  inst_time <- sum(unlist(x$install_time), na.rm = TRUE)
   cat("Build time:  ", pretty_sec(build_time), "\n", sep = "")
   cat("Intall time: ", pretty_sec(inst_time), "\n", sep = "")
 

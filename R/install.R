@@ -358,8 +358,10 @@ print.pkginstall_result <- function(x, ...) {
   if (noupd) cat("Not updated:", noupd, "\n", sep = "")
   if (curr)  cat("Current: ",    curr,  "\n", sep = "")
 
+  ## TODO 
   build_time <- sum(unlist(x$build_time), na.rm = TRUE)
   inst_time <- sum(unlist(x$install_time), na.rm = TRUE)
+
   cat("Build time:  ", pretty_sec(build_time), "\n", sep = "")
   cat("Intall time: ", pretty_sec(inst_time), "\n", sep = "")
 

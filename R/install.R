@@ -320,6 +320,27 @@ create_install_result <-  function(state) {
   result
 }
 
+#' @export
+#' @importFrom prettyunits pretty_sec
+
+print.pkginstall_result <- function(x, ...) {
+  newly <- sum(x$lib_status == "new")
+  upd   <- sum(x$lib_status == "update")
+  noupd <- sum(x$lib_status == "no-update")
+  curr  <- sum(x$lib_status == "current")
+  if (newly) cat("Installed: ",  newly, "\n", sep = "")
+  if (upd)   cat("Updated: ",    upd,   "\n", sep = "")
+  if (noupd) cat("Not updated:", noupd, "\n", sep = "")
+  if (curr)  cat("Current: ",    curr,  "\n", sep = "")
+
+  build_time <- sum(x$build_time, na.rm = TRUE)
+  inst_time <- sum(x$install_time, na.rm = TRUE)
+  cat("Build time:  ", pretty_sec(build_time), "\n", sep = "")
+  cat("Intall time: ", pretty_sec(inst_time), "\n", sep = "")
+
+  invisible(x)
+}
+
 kill_all_processes <- function(state) {
   alive <- FALSE
   for (i in seq_along(state$workers)) {

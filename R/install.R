@@ -27,19 +27,20 @@ install_package_plan <- function(plan, lib = .libPaths()[[1]],
 
   config <- list(lib = lib, num_workers = num_workers)
   state <- make_start_state(plan, config)
+  state$progress <- create_progress_bar(state)
+  on.exit(done_progress_bar(state), add =  TRUE)
 
   withCallingHandlers({
 
     ## Initialise one task for each worker
     for (i in seq_len(state$config$num_workers)) {
-      ## TODO: update progress bar here
       task <- select_next_task(state)
       state <- start_task(state, task)
     }
 
     repeat {
       if (are_we_done(state)) break;
-      ## TODO: update progress bar here
+      update_progress_bar(state)
 
       events <- poll_workers(state)
       state <- handle_events(state, events)
@@ -94,9 +95,7 @@ poll_workers <- function(state) {
   }
 }
 
-## TODO: No timeout currently
-
-get_timeout <- function(state) -1L
+get_timeout <- function(state) 200
 
 handle_events <- function(state, events) {
   for (i in which(events)) state <- handle_event(state, i)
@@ -241,6 +240,10 @@ start_task_install <- function(state, task) {
   lib <- state$config$lib
   metadata <- state$plan$metadata[[pkgidx]]
 
+  pkg <- state$plan$package[pkgidx]
+  version <- state$plan$version[pkgidx]
+  update_progress_bar(state, msg = glue("Installing {pkg} {version}"))
+
   px <- make_install_process(filename, lib = lib, metadata = metadata)
   worker <- list(
     id = get_worker_id(), task = task, process = px,
@@ -287,6 +290,7 @@ stop_task_build <- function(state, worker) {
     alert("danger", "Failed to build {pkg {pkg}} \\
            {version {version}} {timestamp {ptime}}")
   }
+  update_progress_bar(state, 1L)
 
   state$plan$build_done[[pkgidx]] <- TRUE
   state$plan$build_time[[pkgidx]] <- time
@@ -321,6 +325,7 @@ stop_task_install <- function(state, worker) {
   } else {
     alert("danger", "Failed to install  {pkg pkg}} {version {version}}")
   }
+  update_progress_bar(state, 1L)
 
   state$plan$install_done[[pkgidx]] <- TRUE
   state$plan$install_time[[pkgidx]] <- time
@@ -358,7 +363,7 @@ print.pkginstall_result <- function(x, ...) {
   if (noupd) cat("Not updated:", noupd, "\n", sep = "")
   if (curr)  cat("Current: ",    curr,  "\n", sep = "")
 
-  ## TODO 
+  ## TODO
   build_time <- sum(unlist(x$build_time), na.rm = TRUE)
   inst_time <- sum(unlist(x$install_time), na.rm = TRUE)
 

@@ -93,6 +93,7 @@ test_that("handle_event, process still running", {
 test_that("handle_event, build process finished", {
   plan <- readRDS("fixtures/sample_plan.rds")
   state <- make_start_state(plan, list(foo = "bar"))
+  state$plan$build_done[1] <- FALSE
 
   mockery::stub(
     start_task_build, "make_build_process",
@@ -108,7 +109,7 @@ test_that("handle_event, build process finished", {
   repeat {
     events <- poll_workers(state)
     state <- handle_events(state, events)
-    if (!proc$is_alive()) break;
+    if (all(state$plan$build_done)) break;
   }
 
   expect_false(proc$is_alive())
@@ -122,6 +123,7 @@ test_that("handle_event, build process finished", {
 test_that("handle event, build process finished, but failed", {
   plan <- readRDS("fixtures/sample_plan.rds")
   state <- make_start_state(plan, list(foo = "bar"))
+  state$plan$build_done[1] <- FALSE
 
   mockery::stub(
     start_task_install, "make_install_process",
@@ -137,7 +139,7 @@ test_that("handle event, build process finished, but failed", {
     repeat {
       events <- poll_workers(state)
       state <- handle_events(state, events)
-      if (!proc$is_alive()) break;
+      if (all(state$plan$build_done)) break;
     },
     "Failed to install"
   )

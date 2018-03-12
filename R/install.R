@@ -71,6 +71,9 @@ make_start_state <- function(plan, config) {
   )
   plan <- cbind(plan, install_cols)
 
+  installed <- plan$package[plan$install_done]
+  plan$dependencies <- lapply(plan$dependencies, setdiff, installed)
+
   list(
     plan = plan,
     workers = list(),
@@ -169,6 +172,11 @@ select_next_task <- function(state) {
   if (any(can_install)) {
     pkgidx <- can_install[1]
     return(task("install", pkgidx = pkgidx))
+  }
+
+  ## Detect internal error
+  if (!all(state$plan$install_done) && all(is.na(state$plan$worker_id))) {
+    stop("Internal error, no task running and cannot select new task")
   }
 
   ## Looks like nothing else to do

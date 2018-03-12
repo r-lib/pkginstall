@@ -41,10 +41,13 @@ install_extracted_binary <- function(filename, lib_cache, pkg_cache, lib,
   pkg_name <- pkg$name
 
   if (is_loaded(pkg_name)) {
-    warn(type = "runtime_error",
-     "Package {pkg_name} is already loaded, installing may cause problems.
-      Use `pkgload::unload({pkg_name})` to unload it.",
-     package = pkg_name)
+    loaded_from <- dirname(getNamespaceInfo(pkg_name, "path"))
+    if (normalizePath(loaded_from) == normalizePath(lib)) {
+      warn(type = "runtime_error",
+        "Package {pkg_name} is already loaded, installing may cause problems.
+         Use `pkgload::unload({pkg_name})` to unload it.",
+        package = pkg_name)
+    }
   }
 
   lockfile <- lock_cache(lib_cache, pkg_name, getOption("install.lock"))

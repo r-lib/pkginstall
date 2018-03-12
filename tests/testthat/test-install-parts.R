@@ -11,9 +11,10 @@ test_that("make_start_state", {
     "build_stderr", "install_done", "install_time", "install_error",
     "install_stdout", "install_stderr")
   expect_true(all(xcols %in% colnames(state$plan)))
+  eq_cols <- setdiff(colnames(plan), "dependencies")
   expect_identical(
-    as.data.frame(plan),
-    as.data.frame(state$plan[, colnames(plan)])
+    as.data.frame(plan[, eq_cols]),
+    as.data.frame(state$plan[, eq_cols])
   )
 })
 
@@ -246,6 +247,7 @@ test_that("select_next_task", {
   ## We cannot select anything, because of the dependencies
   state <- make_start_state(plan, list(num_workers = 2))
   state$plan$build_done <- FALSE
+  state$plan$worker_id[1] <- 1
   state$plan$dependencies[] <- rep_list(nrow(state$plan), "foobar")
   expect_equal(
     select_next_task(state),

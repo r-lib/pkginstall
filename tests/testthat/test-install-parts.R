@@ -11,7 +11,7 @@ test_that("make_start_state", {
     "build_stderr", "install_done", "install_time", "install_error",
     "install_stdout", "install_stderr")
   expect_true(all(xcols %in% colnames(state$plan)))
-  eq_cols <- setdiff(colnames(plan), "dependencies")
+  eq_cols <- setdiff(colnames(plan), "deps_left")
   expect_identical(
     as.data.frame(plan[, eq_cols]),
     as.data.frame(state$plan[, eq_cols])
@@ -216,7 +216,7 @@ test_that("select_next_task", {
   ## An ongoing build task is not selected again
   state <- make_start_state(plan, list(num_workers = 2))
   state$plan$build_done <- FALSE
-  state$plan$dependencies[] <- rep_list(nrow(state$plan), character())
+  state$plan$deps_left[] <- rep_list(nrow(state$plan), character())
   state$plan$worker_id[-nrow(state$plan)] <- 42
   expect_equal(
     select_next_task(state),
@@ -225,7 +225,7 @@ test_that("select_next_task", {
   ## Source is preferred over binary
   state <- make_start_state(plan, list(num_workers = 2))
   state$plan$build_done[nrow(state$plan)] <- FALSE
-  state$plan$dependencies[] <- rep_list(nrow(state$plan), character())
+  state$plan$deps_left[] <- rep_list(nrow(state$plan), character())
   expect_equal(
     select_next_task(state),
     task("build", pkgidx = nrow(state$plan)))
@@ -233,15 +233,15 @@ test_that("select_next_task", {
   ## Source is selected only if dependencies are done
   state <- make_start_state(plan, list(num_workers = 2))
   state$plan$build_done <- FALSE
-  state$plan$dependencies[] <- rep_list(nrow(state$plan), "foobar")
-  state$plan$dependencies[[nrow(state$plan)]] <- character()
+  state$plan$deps_left[] <- rep_list(nrow(state$plan), "foobar")
+  state$plan$deps_left[[nrow(state$plan)]] <- character()
   expect_equal(
     select_next_task(state),
     task("build", pkgidx = nrow(state$plan)))
 
   ## Binary is selected irrespectively of dependencies
   state <- make_start_state(plan, list(num_workers = 2))
-  state$plan$dependencies[] <- rep_list(nrow(state$plan), "foobar")
+  state$plan$deps_left[] <- rep_list(nrow(state$plan), "foobar")
   expect_equal(
     select_next_task(state),
     task("install", pkgidx = 1L))
@@ -250,7 +250,7 @@ test_that("select_next_task", {
   state <- make_start_state(plan, list(num_workers = 2))
   state$plan$build_done <- FALSE
   state$plan$worker_id[1] <- 1
-  state$plan$dependencies[] <- rep_list(nrow(state$plan), "foobar")
+  state$plan$deps_left[] <- rep_list(nrow(state$plan), "foobar")
   expect_equal(
     select_next_task(state),
     task("idle"))

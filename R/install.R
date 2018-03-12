@@ -72,7 +72,7 @@ make_start_state <- function(plan, config) {
   plan <- cbind(plan, install_cols)
 
   installed <- plan$package[plan$install_done]
-  plan$dependencies <- lapply(plan$dependencies, setdiff, installed)
+  plan$deps_left <- lapply(plan$dependencies, setdiff, installed)
 
   list(
     plan = plan,
@@ -153,7 +153,7 @@ select_next_task <- function(state) {
   ## Can we select a source package build? Do that.
   can_build <- which(
     ! state$plan$build_done &
-    map_int(state$plan$dependencies, length) == 0 &
+    map_int(state$plan$deps_left, length) == 0 &
     is.na(state$plan$worker_id))
 
   if (any(can_build)) {
@@ -371,7 +371,7 @@ stop_task_install <- function(state, worker) {
   }
 
   ## Need to remove from the dependency list
-  state$plan$dependencies <- lapply(state$plan$dependencies, setdiff, pkg)
+  state$plan$deps_left <- lapply(state$plan$deps_left, setdiff, pkg)
 
   state
 }

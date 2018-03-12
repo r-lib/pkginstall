@@ -98,7 +98,7 @@ poll_workers <- function(state) {
   }
 }
 
-get_timeout <- function(state) 200
+get_timeout <- function(state) 100
 
 handle_events <- function(state, events) {
   for (i in which(events)) state <- handle_event(state, i)

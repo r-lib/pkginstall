@@ -314,6 +314,29 @@ stop_task_build <- function(state, worker) {
   state
 }
 
+installed_note <- function(pkg) {
+
+  standard_note <- function() {
+    type <- pkg$resolution[[1]][["files"]][[1]]$metadata$RemoteType
+    if (type == "cran") "" else paste0("(", type, ")")
+  }
+
+  github_note <- function() {
+    meta <- pkg$resolution[[1]][["files"]][[1]]$metadata
+    paste0("(github::", meta[["RemoteUsername"]], "/", meta[["RemoteRepo"]],
+           "@", substr(meta[["RemoteSha"]], 1, 7), ")")
+  }
+
+  switch(
+    pkg$type,
+    cran = "",
+    bioc = "(BioC)",
+    standard = standard_note(),
+    local = "(local)",
+    github = github_note()
+  )
+}
+
 #' @importFrom prettyunits pretty_sec
 
 stop_task_install <- function(state, worker) {
@@ -326,10 +349,11 @@ stop_task_install <- function(state, worker) {
   version <- state$plan$version[pkgidx]
   time <- Sys.time() - state$plan$install_time[[pkgidx]]
   ptime <- pretty_sec(as.numeric(time, units = "secs"))
+  note <- installed_note(state$plan[pkgidx,])
 
   if (success) {
     alert("success", "Installed {pkg {pkg}} \\
-             {version {version}} {timestamp {ptime}}")
+             {version {version}} {note} {timestamp {ptime}}")
   } else {
     alert("danger", "Failed to install  {pkg pkg}} {version {version}}")
   }

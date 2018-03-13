@@ -94,7 +94,14 @@ make_bar <- function(p1, p2, width) {
   bar <- paste(
     c(chars$lpar, p1chars, p2chars, xchars, chars$rpar), collapse = "")
 
-  crayon::green(bar)
+  ## This is a workaround for an RStudio bug:
+  ## https://github.com/r-lib/pkginstall/issues/42
+  if (Sys.getenv("RSTUDIO", "") == "" ||
+      Sys.getenv("RSTUDIO_TERM", "") != "") {
+    crayon::green(bar)
+  } else {
+    bar
+  }
 }
 
 make_progress_block <- function(sym, done, total, prog) {

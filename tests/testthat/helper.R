@@ -54,7 +54,7 @@ if (is_loaded("foo")) {
 
 #' @importFrom callr r_process r_process_options
 
-dummy_worker_process <- R6Class(
+dummy_worker_process <- R6::R6Class(
   "dummy_worker_process",
   inherit = callr::r_process,
   public = list(

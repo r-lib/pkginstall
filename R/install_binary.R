@@ -4,33 +4,47 @@
 #' @param lib library to install packages into
 #' @param metadata Named character vector of metadata entries to be added
 #'   to the \code{DESCRIPTION} after installation.
-#' @importFrom archive archive archive_extract
+#' @param quiet Whether to suppress console output.
 #' @importFrom filelock lock unlock
 #' @importFrom rlang cnd cnd_signal
 #' @export
 install_binary <- function(filename, lib = .libPaths()[[1L]],
-                           metadata = NULL) {
-
-  now <- Sys.time()
+                           metadata = NULL, quiet = !interactive()) {
 
   stopifnot(
     is_string(filename), file.exists(filename),
     is_string(lib),
-    all_named(metadata))
+    all_named(metadata),
+    is_flag(quiet))
 
-  lib_cache <- library_cache(lib)
-  mkdirp(pkg_cache <- tempfile(tmpdir = lib_cache))
-  on.exit(unlink(pkg_cache, recursive = TRUE), add = TRUE)
+  px <- make_install_process(filename, lib = lib, metadata = metadata)
+  stdout <- ""
+  stderr <- ""
 
-  tryCatch(archive_extract(filename, dir = pkg_cache),
-    error = function(e) {
-      abort(type = "invalid_input",
-            "{filename} is an invalid archive, could not extract it")
+  if (!quiet) {
+    bar <- cli$progress_bar(
+      format = paste0(":spin Installing ", filename))
+  }
+
+  repeat {
+    px$poll_io(100)
+    if (!quiet) bar$tick(0)
+    stdout <- paste0(stdout, px$read_output())
+    stderr <- paste0(stderr, px$read_error())
+    if (!px$is_alive() &&
+        !px$is_incomplete_output() && !px$is_incomplete_error()) {
+      break
     }
-  )
+  }
 
-  install_extracted_binary(filename, lib_cache, pkg_cache, lib,
-                           metadata, now)
+  if (!quiet) bar$terminate()
+  if (px$get_exit_status() != 0) {
+    stop("Package installation failed\n", stderr)
+  }
+
+  if (!quiet) cli$alert_success(paste0("Installed ", filename))
+
+  invisible(px$get_result())
 }
 
 install_extracted_binary <- function(filename, lib_cache, pkg_cache, lib,

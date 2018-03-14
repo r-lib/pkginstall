@@ -12,7 +12,6 @@ License: GPL-3
 Depends: 
     R (>= 3.1)
 Imports: 
-    archive,
     callr (>= 2.0.2.9001),
     cli (>= 1.0.0.9002),
     crayon,
@@ -24,6 +23,7 @@ Imports:
     R6,
     rlang
 Suggests: 
+    archive,
     covr,
     mockery,
     pkgdepends (>= 0.0.0.9001),

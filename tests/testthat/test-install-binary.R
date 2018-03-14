@@ -12,17 +12,10 @@ test_that("install_binary", {
   })
 
   expect_error_free(
-    install_binary(pkg, lib = libpath))
+    install_binary(pkg, lib = libpath, quiet = TRUE))
   expect_error_free(
     library("foo", lib.loc = libpath))
-
-  # Installing a loaded package should be an error.
-
   expect_equal(foo::foo(), NULL)
-
-  #expect_error(
-    #install_binary(pkg, lib = libpath),
-    #"Package '.*' is already loaded and cannot be installed[.]")
 })
 
 test_that("install_binary works for simultaneous installs", {
@@ -42,7 +35,7 @@ test_that("install_binary works for simultaneous installs", {
 
   # install and load foo here to test loaded DLLs in another process
   expect_error_free(
-    install_binary(pkg, lib = libpath))
+    install_binary(pkg, lib = libpath, quiet = TRUE))
   expect_error_free(
     library("foo", lib.loc = libpath))
 
@@ -69,8 +62,8 @@ test_that("install_binary errors", {
   cat("foobar\n", file = tmp)
 
   expect_error(
-    install_binary(tmp, lib = tempdir()),
-    "invalid archive"
+    install_binary(tmp, lib = tempdir(), quiet = TRUE),
+    "unknown archive type"
   )
 })
 

@@ -7,7 +7,7 @@ describe("verify_extracted_package", {
   run <- function(pkgfile) {
     unlink(tmp, recursive = TRUE)
     mkdirp(tmp)
-    archive_extract(pkgfile, tmp)
+    archive::archive_extract(pkgfile, tmp)
     verify_extracted_package(pkgfile, tmp)
   }
 

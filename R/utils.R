@@ -39,10 +39,6 @@ warn <- function(msg, type = NULL, ..., .envir = parent.frame()) {
       ))
 }
 
-`%!in%` <- function(x, y) {
-  !x %in% y
-}
-
 is_loaded <- function(package) {
   package %in% loadedNamespaces()
 }
@@ -122,6 +118,10 @@ cut_into_lines <- function(x) {
 
 is_string <- function(x) {
   is.character(x) && length(x) == 1 && !is.na(x)
+}
+
+is_flag <- function(x) {
+  is.logical(x) && length(x) == 1 && !is.na(x)
 }
 
 is_count <- function(x, min = 0L)  {

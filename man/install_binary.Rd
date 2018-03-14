@@ -4,7 +4,8 @@
 \alias{install_binary}
 \title{Install a R binary package}
 \usage{
-install_binary(filename, lib = .libPaths()[[1L]], metadata = NULL)
+install_binary(filename, lib = .libPaths()[[1L]], metadata = NULL,
+  quiet = !interactive())
 }
 \arguments{
 \item{filename}{filename of built binary package to install}
@@ -13,6 +14,8 @@ install_binary(filename, lib = .libPaths()[[1L]], metadata = NULL)
 
 \item{metadata}{Named character vector of metadata entries to be added
 to the \code{DESCRIPTION} after installation.}
+
+\item{quiet}{Whether to suppress console output.}
 }
 \description{
 Install a R binary package

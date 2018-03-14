@@ -8,7 +8,7 @@ make_install_process <- function(filename, lib = .libPaths()[[1L]],
   type <- detect_package_archive_type(filename)
   if (type == "unknown") {
     abort(type = "invalid_input",
-          "Cannot extract {filename}, unknown type")
+          "Cannot extract {filename}, unknown archive type?")
   }
 
   lib_cache <- library_cache(lib)

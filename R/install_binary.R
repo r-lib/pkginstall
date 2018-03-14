@@ -76,38 +76,6 @@ install_extracted_binary <- function(filename, lib_cache, pkg_cache, lib,
   installed_path
 }
 
-
-get_pkg_name <- function(tarball) {
-  if (!inherits(tarball, "archive")) {
-    tarball <- archive(tarball)
-  }
-
-  filename <- attr(tarball, "path")
-
-  description_path <- grep("DESCRIPTION$", tarball$path, value = TRUE)
-
-  # If there is more than one DESCRIPTION in the tarball use the shortest one,
-  # which should always be the top level DESCRIPTION file.
-  # This may happen if there are test packages in the package tests for instance.
-  description_path <- head(description_path[order(nchar(description_path))], n = 1)
-
-  if (length(description_path) == 0) {
-    abort(type = "invalid_input", "
-      {filename} is not a valid binary, it does not contain a `DESCRIPTION` file.
-      ")
-  }
-
-  pkg <- dirname(description_path)
-
-  nested_directory <- dirname(pkg) != "."
-  if (nested_directory) {
-    abort(type = "invalid_input", "
-      {filename} is not a valid binary, the `DESCRIPTION` file is nested more than 1 level deep {description_path}.
-      ")
-  }
-  pkg
-}
-
 #' @importFrom utils modifyList
 add_metadata <- function(pkg_path, metadata) {
   if (!length(metadata)) return()

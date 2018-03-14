@@ -16,7 +16,7 @@ local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent
   }
 
   filename <- file.path(d, glue("{pkgname}.{extension}"))
-  archive_write_dir(filename, d)
+  archive::archive_write_dir(filename, d)
 
   # We do not want to unlink files if we are calling this from the R console,
   # useful when debugging.

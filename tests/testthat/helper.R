@@ -1,4 +1,4 @@
-local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent.frame()) {
+local_binary_package <- function(pkgname, ..., envir = parent.frame()) {
 
   # All arguments must be named
   args <- list(...)
@@ -15,8 +15,11 @@ local_binary_package <- function(pkgname, ..., extension = "tgz", envir = parent
     })
   }
 
-  filename <- file.path(d, glue("{pkgname}.{extension}"))
-  archive::archive_write_dir(filename, d)
+  filename <- file.path(d, glue("{pkgname}.tgz"))
+  withr::with_dir(
+    dirname(filename),
+    utils::tar(basename(filename), pkgname, compression = "gzip")
+  )
 
   # We do not want to unlink files if we are calling this from the R console,
   # useful when debugging.

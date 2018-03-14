@@ -49,7 +49,7 @@ expect_error_free <- function(...) {
 }
 
 if (is_loaded("foo")) {
-  pkgload::unload("foo")
+  unloadNamespace("foo")
 }
 
 #' @importFrom callr r_process r_process_options

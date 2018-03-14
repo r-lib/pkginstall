@@ -44,10 +44,19 @@ need_internal_tar <- local({
   internal <- NULL
   function() {
     if (!is.null(internal)) return(internal)
+
     mkdirp(tmp <- tempfile())
     on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
     tarfile <- system.file(package = .packageName, "tools", "pkg_1.0.0.tgz")
-    p <- external_untar_process$new(tarfile, exdir = tmp)
+
+    tryCatch(
+      p <- external_untar_process$new(tarfile, exdir = tmp),
+      error = function(e) {
+        internal <<- TRUE
+      }
+    )
+    if (!is.null(internal)) return(internal)
+
     p$wait(timeout = 2000)
     p$kill()
     internal <<- p$get_exit_status() != 0 ||

@@ -22,13 +22,13 @@ Imports:
     pkgbuild (>= 0.0.0.9001),
     prettyunits,
     R6,
-    rlang,
-    withr
+    rlang
 Suggests: 
     covr,
     mockery,
     pkgdepends (>= 0.0.0.9001),
-    testthat
+    testthat,
+    withr
 ByteCompile: true
 Encoding: UTF-8
 LazyData: true

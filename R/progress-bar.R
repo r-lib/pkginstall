@@ -47,7 +47,6 @@ create_progress_bar <- function(state) {
   if (!is_verbose()) return()
   pkg_data$spinner <- get_spinner()
   pkg_data$spinner_state <- 1L
-  pkg_data$last_msg <- NULL
 
   cli$progress_bar(
     format = ":xbar ETA :eta | :xbuilt | :xinst | :xmsg",
@@ -55,10 +54,9 @@ create_progress_bar <- function(state) {
   )
 }
 
-update_progress_bar <- function(state, tick = 0, msg = NULL) {
+update_progress_bar <- function(state, tick = 0) {
 
   if (!is_verbose()) return()
-  if (! is.null(msg)) pkg_data$last_msg <- msg
 
   plan <- state$plan
   total <- nrow(plan)
@@ -73,7 +71,7 @@ update_progress_bar <- function(state, tick = 0, msg = NULL) {
     xbar = make_bar(installed / total, built/total, width =  15),
     xbuilt = make_progress_block(chars$build, built, total, building),
     xinst = make_progress_block(chars$inst, installed, total, installing),
-    xmsg = pkg_data$last_msg %||% ""
+    xmsg = make_trailing_progress_msg(state)
   )
 
   state$progress$tick(tick, tokens = tokens)
@@ -118,4 +116,19 @@ make_progress_block <- function(sym, done, total, prog) {
 done_progress_bar <- function(state) {
   if (!is_verbose()) return()
   state$progress$terminate()
+}
+
+make_trailing_progress_msg <- function(state) {
+  working <- !is.na(state$plan$worker_id)
+  installing <- state$plan$build_done & working
+  building <- !state$plan$build_done & working
+
+  building_pkgs <- paste(state$plan$package[building], collapse = ", ")
+  installing_pkgs <- paste(state$plan$package[installing], collapse = ", ")
+
+  paste0(
+    if (any(building)) paste0("building ", building_pkgs),
+    if (any(building) && any(installing)) ", ",
+    if (any(installing)) paste0("installing ", installing_pkgs)
+  )
 }

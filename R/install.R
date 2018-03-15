@@ -250,7 +250,7 @@ start_task_install <- function(state, task) {
 
   pkg <- state$plan$package[pkgidx]
   version <- state$plan$version[pkgidx]
-  update_progress_bar(state, msg = glue("Installing {pkg} {version}"))
+  update_progress_bar(state)
 
   px <- make_install_process(filename, lib = lib, metadata = metadata)
   worker <- list(

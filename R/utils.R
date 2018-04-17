@@ -1,4 +1,4 @@
-#' @importFrom glue single_quote evaluate collapse
+#' @importFrom glue single_quote glue_collapse
 collapse_quote_transformer <- function(code, envir) {
   collapse_re <- "[*]$"
   quote_re <- "^[|]"
@@ -11,7 +11,7 @@ collapse_quote_transformer <- function(code, envir) {
     res <- single_quote(res)
   }
   if (should_collapse) {
-    res <- collapse(res, sep = ", ", last = " and ")
+    res <- glue_collapse(res, sep = ", ", last = " and ")
   }
   res
 }

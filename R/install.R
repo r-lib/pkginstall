@@ -17,7 +17,7 @@ install_package_plan <- function(plan, lib = .libPaths()[[1]],
 
   required_columns <- c(
     "type", "binary", "dependencies", "file", "vignettes",
-    "needs_compilation", "metadata", "package")
+    "needscompilation", "metadata", "package")
   stopifnot(
     inherits(plan, "data.frame"),
     all(required_columns %in% colnames(plan)),
@@ -211,10 +211,10 @@ get_worker_id <- (function() {
 })()
 
 make_build_process <- function(path, tmp_dir, lib, vignettes,
-                               needs_compilation) {
+                               needscompilation) {
   pkgbuild_process$new(
     path, tmp_dir, binary = TRUE, vignettes = vignettes,
-    needs_compilation = needs_compilation, compile_attributes = FALSE,
+    needs_compilation = needscompilation, compile_attributes = FALSE,
     args = glue("--library={lib}"))
 }
 
@@ -224,7 +224,7 @@ start_task_build <- function(state, task) {
   pkgidx <- task$args$pkgidx
   path <- state$plan$file[pkgidx]
   vignettes <- state$plan$vignettes[pkgidx]
-  needs_compilation <- !identical(state$plan$needs_compilation[pkgidx], "no")
+  needscompilation <- !identical(state$plan$needscompilation[pkgidx], "no")
   tmp_dir <- create_temp_dir()
   lib <- state$config$lib
 
@@ -232,7 +232,7 @@ start_task_build <- function(state, task) {
   version <- state$plan$version[pkgidx]
   alert("info", "Building {pkg {pkg}} {version {version}}")
 
-  px <- make_build_process(path, tmp_dir, lib, vignettes, needs_compilation)
+  px <- make_build_process(path, tmp_dir, lib, vignettes, needscompilation)
   worker <- list(id = get_worker_id(), task = task, process = px,
                  stdout = character(), stderr = character())
   state$workers <- c(
@@ -317,12 +317,15 @@ stop_task_build <- function(state, worker) {
 installed_note <- function(pkg) {
 
   standard_note <- function() {
-    type <- pkg$resolution[[1]][["files"]][[1]]$metadata$RemoteType
-    if (type == "cran") "" else paste0("(", type, ")")
+    if (pkg$type %in% c("cran", "standard")) {
+      ""
+    } else {
+      paste0("(", pkg$type, ")")
+    }
   }
 
   github_note <- function() {
-    meta <- pkg$resolution[[1]][["files"]][[1]]$metadata
+    meta <- pkg$metadata[[1]]
     paste0("(github::", meta[["RemoteUsername"]], "/", meta[["RemoteRepo"]],
            "@", substr(meta[["RemoteSha"]], 1, 7), ")")
   }

@@ -17,7 +17,7 @@ Imports:
     crayon,
     desc,
     filelock,
-    glue,
+    glue (>= 1.2.0.9000),
     pkgbuild (>= 0.0.0.9001),
     prettyunits,
     R6,

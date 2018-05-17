@@ -1,4 +1,4 @@
-#' @importFrom glue single_quote evaluate collapse
+#' @importFrom glue single_quote glue_collapse
 collapse_quote_transformer <- function(code, envir) {
   collapse_re <- "[*]$"
   quote_re <- "^[|]"
@@ -6,12 +6,12 @@ collapse_quote_transformer <- function(code, envir) {
   should_quote <- !grepl(quote_re, code)
   code <- sub(collapse_re, "",
     sub(quote_re, "", code))
-  res <- evaluate(code, envir)
+  res <- eval(parse(text = code, keep.source = FALSE), envir = envir)
   if (should_quote) {
     res <- single_quote(res)
   }
   if (should_collapse) {
-    res <- collapse(res, sep = ", ", last = " and ")
+    res <- glue_collapse(res, sep = ", ", last = " and ")
   }
   res
 }

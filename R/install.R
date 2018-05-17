@@ -6,7 +6,6 @@
 #' @param num_workers Number of worker processes to use.
 #' @return Information about the installation process.
 #'
-#' @importFrom rlang with_handlers exiting inplace
 #' @importFrom callr poll
 #' @export
 

@@ -10,24 +10,23 @@
 #' @importFrom cliapp default_app start_app
 #' @export
 install_binary <- function(filename, lib = .libPaths()[[1L]],
-                           metadata = NULL, quiet = !interactive()) {
+                           metadata = NULL, quiet = NULL) {
 
   stopifnot(
     is_string(filename), file.exists(filename),
     is_string(lib),
     all_named(metadata),
-    is_flag(quiet))
+    is.null(quiet) || is_flag(quiet))
 
+  quiet <- quiet %||% is_verbose()
   app <- default_app() %||% start_app()
 
   px <- make_install_process(filename, lib = lib, metadata = metadata)
   stdout <- ""
   stderr <- ""
 
-  if (!quiet) {
-    bar <- app$progress_bar(
+  bar <- app$progress_bar(
       format = paste0(":spin Installing ", filename))
-  }
 
   repeat {
     px$poll_io(100)
@@ -45,7 +44,7 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
     stop("Package installation failed\n", stderr)
   }
 
-  if (!quiet) app$alert_success(paste0("Installed ", filename))
+  app$alert_success(paste0("Installed ", filename))
 
   invisible(px$get_result())
 }

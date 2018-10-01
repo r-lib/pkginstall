@@ -18,7 +18,7 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
     all_named(metadata),
     is.null(quiet) || is_flag(quiet))
 
-  quiet <- quiet %||% is_verbose()
+  quiet <- quiet %||% ! is_verbose()
   app <- default_app() %||% start_app()
 
   px <- make_install_process(filename, lib = lib, metadata = metadata)

@@ -92,11 +92,11 @@ map_int <- get("map_int", asNamespace("rlang"))
 is_verbose <- function() {
   env <- Sys.getenv("R_PKG_SHOW_PROGRESS", "")
   if (env != "") {
-    isTRUE(env)
+    tolower(env) == "true"
   } else {
     opt <- getOption("pkg.show_progress")
     if (!is.null(opt)) {
-      return(isTRUE(opt))
+      isTRUE(opt)
     } else {
       interactive()
     }

@@ -14,7 +14,7 @@ Depends:
 Imports: 
     callr (>= 2.0.2.9001),
     cli (>= 1.0.0.9002),
-    cliapp,
+    cliapp (>= 0.0.0.9002),
     crayon,
     desc,
     filelock,

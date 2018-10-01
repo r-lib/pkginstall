@@ -21,8 +21,8 @@ collapse_quote_transformer <- function(code, envir) {
 abort <- function(msg, type = NULL, ..., .envir = parent.frame()) {
   stop(
     error_cnd(
-      type = type, ...,
-      .msg = glue(msg,
+      .subclass = type, ...,
+      message = glue(msg,
         .envir = parent.frame(),
         .transformer = collapse_quote_transformer),
       ))
@@ -32,8 +32,8 @@ abort <- function(msg, type = NULL, ..., .envir = parent.frame()) {
 warn <- function(msg, type = NULL, ..., .envir = parent.frame()) {
   warning(
     warning_cnd(
-      type = type, ...,
-      .msg = glue(msg,
+      .subclass = type, ...,
+      message = glue(msg,
         .envir = parent.frame(),
         .transformer = collapse_quote_transformer),
       ))

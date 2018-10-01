@@ -22,7 +22,7 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
   stderr <- ""
 
   if (!quiet) {
-    bar <- cli$progress_bar(
+    bar <- cliapp$new()$progress_bar(
       format = paste0(":spin Installing ", filename))
   }
 
@@ -42,7 +42,7 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
     stop("Package installation failed\n", stderr)
   }
 
-  if (!quiet) cli$alert_success(paste0("Installed ", filename))
+  if (!quiet) cliapp$new()$alert_success(paste0("Installed ", filename))
 
   invisible(px$get_result())
 }

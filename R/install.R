@@ -419,7 +419,7 @@ kill_all_processes <- function(state) {
     for (i in seq_along(state$workers)) {
       proc <- state$workers[[i]]$process
       proc$wait(200)
-      proc$kill()
+      proc$kill_tree()
     }
   }
 }

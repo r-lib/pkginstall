@@ -50,7 +50,8 @@ create_progress_bar <- function(state) {
   app <- default_app()
   app$progress_bar(
     format = ":xbar ETA :eta | :xbuilt | :xinst | :xmsg",
-    total = sum(!state$plan$build_done) + sum(!state$plan$install_done)
+    total = sum(!state$plan$build_done) + sum(!state$plan$install_done),
+    force = TRUE
   )
 }
 

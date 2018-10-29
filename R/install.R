@@ -211,10 +211,15 @@ get_worker_id <- (function() {
 
 make_build_process <- function(path, tmp_dir, lib, vignettes,
                                needscompilation) {
-  pkgbuild_process$new(
-    path, tmp_dir, binary = TRUE, vignettes = vignettes,
-    needs_compilation = needscompilation, compile_attributes = FALSE,
-    args = glue("--library={lib}"))
+
+  ## with_libpath() is needed for newer callr, which forces the current
+  ## lib path in the child process.
+  withr::with_libpaths(lib, action = "prefix",
+    pkgbuild_process$new(
+      path, tmp_dir, binary = TRUE, vignettes = vignettes,
+      needs_compilation = needscompilation, compile_attributes = FALSE,
+      args = glue("--library={lib}"))
+    )
 }
 
 #' @importFrom pkgbuild pkgbuild_process

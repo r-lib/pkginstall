@@ -7,7 +7,7 @@
 #' @param quiet Whether to suppress console output.
 #' @importFrom filelock lock unlock
 #' @importFrom rlang cnd cnd_signal
-#' @importFrom cliapp default_app start_app
+#' @importFrom cliapp cli_progress_bar cli_alert_success
 #' @export
 install_binary <- function(filename, lib = .libPaths()[[1L]],
                            metadata = NULL, quiet = NULL) {
@@ -19,13 +19,12 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
     is.null(quiet) || is_flag(quiet))
 
   quiet <- quiet %||% ! is_verbose()
-  app <- default_app() %||% start_app()
 
   px <- make_install_process(filename, lib = lib, metadata = metadata)
   stdout <- ""
   stderr <- ""
 
-  bar <- app$progress_bar(
+  bar <- cli_progress_bar(
       format = paste0(":spin Installing ", filename))
 
   repeat {
@@ -44,7 +43,7 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
     stop("Package installation failed\n", stderr)
   }
 
-  app$alert_success(paste0("Installed ", filename))
+  cli_alert_success(paste0("Installed ", filename))
 
   invisible(px$get_result())
 }

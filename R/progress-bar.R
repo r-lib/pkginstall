@@ -28,15 +28,17 @@ progress_chars <- function() {
   pkg_data$chars
 }
 
+#' @importFrom cliapp cli_alert_success cli_alert_info cli_alert_warning
+#'   cli_alert_danger
+
 alert <- function(type, msg, .envir = parent.frame()) {
   if (!is_verbose()) return()
-  app <- default_app()
   switch (
     type,
-    success = app$alert_success(msg, .envir = .envir),
-    info = app$alert_info(msg, .envir = .envir),
-    warning = app$alert_warning(msg, .envir = .envir),
-    danger = app$alert_danger(msg, .envir = .envir)
+    success = cli_alert_success(msg, .envir = .envir),
+    info = cli_alert_info(msg, .envir = .envir),
+    warning = cli_alert_warning(msg, .envir = .envir),
+    danger = cli_alert_danger(msg, .envir = .envir)
   )
 }
 
@@ -47,8 +49,7 @@ create_progress_bar <- function(state) {
   pkg_data$spinner <- get_spinner()
   pkg_data$spinner_state <- 1L
 
-  app <- default_app()
-  app$progress_bar(
+  cli_progress_bar(
     format = ":xbar ETA :eta | :xbuilt | :xinst | :xmsg",
     total = sum(!state$plan$build_done) + sum(!state$plan$install_done),
     force = TRUE

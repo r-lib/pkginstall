@@ -160,13 +160,16 @@ test_that("handle_event, install process finished", {
   proc <- state$workers[[1]]$process
   on.exit(proc$kill(), add = TRUE)
 
+  done <- FALSE
   repeat {
     events <- poll_workers(state)
     state <- handle_events(state, events)
-    if (!proc$is_alive()) break;
+    if (done) break
+    if (!proc$is_alive()) done <- TRUE
   }
 
   expect_false(proc$is_alive())
+  if (!isFALSE(state$plan$install_error[[1]])) browser()
   expect_false(state$plan$install_error[[1]])
   expect_equal(state$plan$install_stdout[[1]], c("out 1", "out 2"))
   expect_equal(state$plan$install_stderr[[1]], c("err 1", "err 2"))
@@ -188,14 +191,15 @@ test_that("handle event, install process finished, but failed", {
   proc <- state$workers[[1]]$process
   on.exit(proc$kill(), add = TRUE)
 
-  expect_error(
+  expect_error({
+    done <- FALSE
     repeat {
       events <- poll_workers(state)
       state <- handle_events(state, events)
-      if (!proc$is_alive()) break;
-    },
-    "Failed to install"
-  )
+      if (done) break
+      if (!proc$is_alive()) done <- TRUE
+    }
+  }, "Failed to install")
 })
 
 test_that("select_next_task", {

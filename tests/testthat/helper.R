@@ -87,3 +87,7 @@ make_dummy_worker_process <- function(n_iter = 10, sleep = 1, status = 0) {
       ))
   }
 }
+
+skip_without_package <- function(pkg) {
+  if (!requireNamespace("pkgdepends", quietly = TRUE)) skip(paste("No", pkg))
+}

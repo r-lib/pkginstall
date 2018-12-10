@@ -27,14 +27,12 @@ Imports:
 Suggests: 
     covr,
     mockery,
-    pkgdepends (>= 0.0.0.9001),
     testthat
 ByteCompile: true
 Encoding: UTF-8
 LazyData: true
 Remotes:
     r-lib/callr,
-    r-lib/cliapp,
-    r-lib/pkgdepends
+    r-lib/cliapp
 RoxygenNote: 6.1.1
 Roxygen: list(markdown = TRUE)

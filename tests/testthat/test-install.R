@@ -2,6 +2,9 @@
 context("install_packages")
 
 describe("install_packages", {
+
+  skip_without_package("pkgdepends")
+
   it("works with source packages", {
 
   pkg <- "foo_0.0.0.9000.tar.gz"
@@ -17,7 +20,7 @@ describe("install_packages", {
   })
 
   withr::with_options(list(pkg.show_progress = FALSE), {
-    plan <- pkgdepends::make_install_plan(
+    plan <- asNamespace("pkgdepends")$make_install_plan(
       paste0("local::", pkg), lib = libpath)
     expect_error_free(
       install_package_plan(plan, lib = libpath))

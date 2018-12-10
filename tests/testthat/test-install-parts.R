@@ -169,7 +169,6 @@ test_that("handle_event, install process finished", {
   }
 
   expect_false(proc$is_alive())
-  if (!isFALSE(state$plan$install_error[[1]])) browser()
   expect_false(state$plan$install_error[[1]])
   expect_equal(state$plan$install_stdout[[1]], c("out 1", "out 2"))
   expect_equal(state$plan$install_stderr[[1]], c("err 1", "err 2"))

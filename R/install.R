@@ -56,12 +56,12 @@ make_start_state <- function(plan, config) {
   ## We store the data about build and installation here
   install_cols <- data.frame(
     stringsAsFactors = FALSE,
-    build_done = plan$type == "installed" | plan$binary,
+    build_done = (plan$type %in% c("deps", "installed")) | plan$binary,
     build_time = I(rep_list(nrow(plan), as.POSIXct(NA))),
     build_error = I(rep_list(nrow(plan), list())),
     build_stdout = I(rep_list(nrow(plan), character())),
     build_stderr = I(rep_list(nrow(plan), character())),
-    install_done = plan$type == "installed",
+    install_done = plan$type %in% c("deps", "installed"),
     install_time = I(rep_list(nrow(plan), as.POSIXct(NA))),
     install_error = I(rep_list(nrow(plan), list())),
     install_stdout = I(rep_list(nrow(plan), character())),

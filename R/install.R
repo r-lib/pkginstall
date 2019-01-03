@@ -226,7 +226,11 @@ make_build_process <- function(path, tmp_dir, lib, vignettes,
 
 start_task_build <- function(state, task) {
   pkgidx <- task$args$pkgidx
-  path <- state$plan$file[pkgidx]
+  path <- if (state$plan$type[pkgidx] == "local") {
+      sub("^file://", "", state$plan$sources[[pkgidx]])
+    } else {
+      state$plan$file[pkgidx]
+    }
   vignettes <- state$plan$vignettes[pkgidx]
   needscompilation <- !identical(state$plan$needscompilation[pkgidx], "no")
   tmp_dir <- create_temp_dir()

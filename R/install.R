@@ -1,5 +1,5 @@
 
-#' Perform a package installation plan, as creted by pkgdepends
+#' Perform a package installation plan, as created by pkgdepends
 #'
 #' @param plan Package plan object, returned by pkgdepends
 #' @param lib Library directory to install to.

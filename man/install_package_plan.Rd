@@ -2,7 +2,7 @@
 % Please edit documentation in R/install.R
 \name{install_package_plan}
 \alias{install_package_plan}
-\title{Perform a package installation plan, as creted by pkgdepends}
+\title{Perform a package installation plan, as created by pkgdepends}
 \usage{
 install_package_plan(plan, lib = .libPaths()[[1]], num_workers = 1)
 }
@@ -17,5 +17,5 @@ install_package_plan(plan, lib = .libPaths()[[1]], num_workers = 1)
 Information about the installation process.
 }
 \description{
-Perform a package installation plan, as creted by pkgdepends
+Perform a package installation plan, as created by pkgdepends
 }

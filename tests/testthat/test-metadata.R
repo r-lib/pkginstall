@@ -24,7 +24,7 @@ test_that("install_binary metadata", {
 
 test_that("install_package_plan metadata", {
 
-  skip_without_package("pkgdepends")
+  skip_without_package("pak")
 
   pkg <- "foo_0.0.0.9000.tar.gz"
   expect_error_free(pkgbuild::build("foo", quiet = TRUE))
@@ -33,7 +33,7 @@ test_that("install_package_plan metadata", {
   on.exit(unlink(c(libpath, pkg), recursive = TRUE), add = TRUE)
 
   withr::with_options(list(pkg.show_progress = FALSE), {
-    plan <- asNamespace("pkgdepends")$make_install_plan(
+    plan <- make_install_plan(
       paste0("local::", pkg), lib = libpath)
     plan$metadata[[1]] <- c("Foo" = "Bar", "Foobar" = "baz")
     plan$vignettes <- FALSE

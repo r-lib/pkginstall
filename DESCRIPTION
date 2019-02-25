@@ -12,9 +12,9 @@ License: GPL-3
 Depends: 
     R (>= 3.1)
 Imports: 
-    callr (>= 3.0.0.9001),
+    callr (>= 3.1.0),
     cli (>= 1.0.1),
-    cliapp (>= 0.0.0.9002),
+    cliapp (>= 0.1.0),
     crayon,
     desc (>= 1.2.0),
     filelock (>= 1.0.2),
@@ -31,8 +31,5 @@ Suggests:
 ByteCompile: true
 Encoding: UTF-8
 LazyData: true
-Remotes:
-    r-lib/callr,
-    r-lib/cliapp
 RoxygenNote: 6.1.1
 Roxygen: list(markdown = TRUE)

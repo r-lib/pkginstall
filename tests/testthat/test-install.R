@@ -3,7 +3,7 @@ context("install_packages")
 
 describe("install_packages", {
 
-  skip_without_package("pak")
+  skip_without_package("pkgdepends")
 
   it("works with source packages", {
 

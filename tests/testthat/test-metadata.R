@@ -24,7 +24,7 @@ test_that("install_binary metadata", {
 
 test_that("install_package_plan metadata", {
 
-  skip_without_package("pak")
+  skip_without_package("pkgdepends")
 
   pkg <- "foo_0.0.0.9000.tar.gz"
   expect_error_free(pkgbuild::build("foo", quiet = TRUE))

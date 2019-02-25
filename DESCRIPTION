@@ -28,9 +28,10 @@ Imports:
 Suggests: 
     covr,
     mockery,
-    pak,
+    pkgdepends,
     testthat
 Remotes:
+    r-lib/pkgdepends,
     r-lib/zip@process-pass-args
 ByteCompile: true
 Encoding: UTF-8

@@ -93,7 +93,7 @@ skip_without_package <- function(pkg) {
 }
 
 make_install_plan <- function(ref, lib = .libPaths()[1]) {
-  r <- asNamespace("pak")$remotes()$new(ref, lib = lib)
+  r <- asNamespace("pkgdepends")$remotes()$new(ref, lib = lib)
   r$resolve()
   r$solve()
   r$download_solution()

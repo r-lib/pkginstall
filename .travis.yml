@@ -20,3 +20,8 @@ matrix:
 
 after_success:
   - Rscript -e 'covr::codecov()'
+
+env:
+  global:
+  - NOT_CRAN="true"
+  - _R_CHECK_SYSTEM_CLOCK_="FALSE"

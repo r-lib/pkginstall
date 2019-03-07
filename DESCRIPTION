@@ -29,6 +29,7 @@ Suggests:
     covr,
     mockery,
     pkgdepends,
+    rstudioapi,
     testthat
 Remotes:
     r-lib/pkgdepends,

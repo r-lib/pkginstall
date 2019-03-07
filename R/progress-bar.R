@@ -28,18 +28,29 @@ progress_chars <- function() {
   pkg_data$chars
 }
 
+#' @importFrom cli symbol
 #' @importFrom cliapp cli_alert_success cli_alert_info cli_alert_warning
-#'   cli_alert_danger
+#'   cli_alert_danger cli_text
 
 alert <- function(type, msg, .envir = parent.frame()) {
   if (!is_verbose()) return()
-  switch (
-    type,
-    success = cli_alert_success(msg, .envir = .envir),
-    info = cli_alert_info(msg, .envir = .envir),
-    warning = cli_alert_warning(msg, .envir = .envir),
-    danger = cli_alert_danger(msg, .envir = .envir)
-  )
+  if (have_rstudio_bug_2387()) {
+    switch(
+      type,
+      success = cli_text(paste(symbol$tick, msg), .envir = .envir),
+      info = cli_text(paste(symbol$info, msg), .envir = .envir),
+      warning = cli_alert_warning(msg, .envir = .envir),
+      danger = cli_alert_danger(msg, .envir = .envir)
+    )
+  } else {
+    switch (
+      type,
+      success = cliapp::cli_alert_success(msg, .envir = .envir),
+      info = cli_alert_info(msg, .envir = .envir),
+      warning = cli_alert_warning(msg, .envir = .envir),
+      danger = cli_alert_danger(msg, .envir = .envir)
+    )
+  }
 }
 
 #' @importFrom cli get_spinner
@@ -68,13 +79,24 @@ update_progress_bar <- function(state, tick = 0) {
   building <- sum(buildingl <- !plan$build_done & !is.na(plan$worker_id))
   installing <- sum(!buildingl & !is.na(plan$worker_id))
 
+  ## This is a workaround for an RStudio bug:
+  ## https://github.com/r-lib/pkginstall/issues/42
+  pp <- if (Sys.getenv("RSTUDIO", "") == "" ||
+            Sys.getenv("RSTUDIO_TERM", "") != "") {
+    function(x) x
+  } else {
+    function(x) crayon::strip_style(x)
+  }
+
   chars <- progress_chars()
   tokens <- list(
-    xbar = make_bar(installed / total, built/total, width =  15),
-    xbuilt = make_progress_block(chars$build, built, total, building),
-    xinst = make_progress_block(chars$inst, installed, total, installing),
-    xmsg = make_trailing_progress_msg(state)
+    xbar = pp(make_bar(installed / total, built/total, width =  15)),
+    xbuilt = pp(make_progress_block(chars$build, built, total, building)),
+    xinst = pp(make_progress_block(chars$inst, installed, total, installing)),
+    xmsg = pp(make_trailing_progress_msg(state))
   )
+
+  saveRDS(tokens, "/tmp/tok.rds")
 
   state$progress$tick(tick, tokens = tokens)
 }

@@ -143,3 +143,20 @@ is_count <- function(x, min = 0L)  {
 all_named <- function(x) {
   length(names(x)) == length(x) && all(names(x) != "")
 }
+
+
+is_rstudio_version <- function(ver) {
+  tryCatch(
+    rstudioapi::getVersion() >= ver,
+    error = function(e) FALSE
+  )
+}
+
+have_rstudio_bug_2387 <- function() {
+  if (!is.null(r <- pkg_data$rstudio_bug_2387)) return(r)
+  r <- pkg_data$rstudio_bug_2387 <-
+    Sys.getenv("RSTUDIO", "") != "" &&
+    Sys.getenv("RSTUDIO_TERM", "") == "" &&
+    !is_rstudio_version("1.2.128")
+  r
+}

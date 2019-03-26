@@ -24,8 +24,10 @@ Compared to `utils::install.packages()` it
 
 ## Installation
 
+Once on CRAN, install with
+
 ```r
-devtools::install_github("r-lib/pkginstall")
+install.packages("pkginstall")
 ```
 
 ## Example

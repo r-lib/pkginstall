@@ -63,7 +63,7 @@ test_that("install_binary errors", {
 
   expect_error(
     install_binary(tmp, lib = tempdir(), quiet = TRUE),
-    "unknown archive type"
+    "unknown archive type", class = "invalid_input"
   )
 })
 
@@ -74,6 +74,6 @@ test_that("make_install_process error", {
 
   expect_error(
     make_install_process(tmp, lib = tempdir()),
-    "Cannot extract"
+    "Cannot extract", class = "invalid_input"
   )
 })

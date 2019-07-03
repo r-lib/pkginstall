@@ -24,7 +24,7 @@ Imports:
     R6,
     rlang (>= 0.2.0),
     withr (>= 2.1.1),
-    zip (>= 2.0.0.9000)
+    zip (>= 2.0.2)
 Suggests: 
     covr,
     mockery,
@@ -32,8 +32,7 @@ Suggests:
     rstudioapi,
     testthat
 Remotes:
-    r-lib/pkgdepends,
-    r-lib/zip@process-pass-args
+    r-lib/pkgdepends
 ByteCompile: true
 Encoding: UTF-8
 LazyData: true

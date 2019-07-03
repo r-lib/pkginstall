@@ -28,11 +28,8 @@ Imports:
 Suggests: 
     covr,
     mockery,
-    pkgdepends,
     rstudioapi,
     testthat
-Remotes:
-    r-lib/pkgdepends
 ByteCompile: true
 Encoding: UTF-8
 LazyData: true

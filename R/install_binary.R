@@ -63,7 +63,7 @@ install_extracted_binary <- function(filename, lib_cache, pkg_cache, lib,
     # First move the existing library (which still works even if a process has
     # the DLL open), then try to delete it, which may fail if another process
     # has the file open.
-    move_to <- file.path(create_temp_dir(), pkg_name)
+    move_to <- file.path(lib_cache, pkg_name)
     ret <- file.rename(installed_path, move_to)
     if (!ret) {
       abort(type = "filesystem",

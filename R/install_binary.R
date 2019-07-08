@@ -64,6 +64,8 @@ install_extracted_binary <- function(filename, lib_cache, pkg_cache, lib,
     # the DLL open), then try to delete it, which may fail if another process
     # has the file open.
     move_to <- file.path(lib_cache, pkg_name)
+    # In case there is a broken install here already
+    unlink(move_to, recursive = TRUE, force = TRUE)
     ret <- file.rename(installed_path, move_to)
     if (!ret) {
       abort(type = "filesystem",

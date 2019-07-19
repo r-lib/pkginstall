@@ -48,6 +48,10 @@ expect_error_free <- function(...) {
   testthat::expect_error(..., regexp = NA)
 }
 
+expect_error <- function(..., class = "error") {
+  testthat::expect_error(..., class = class)
+}
+
 if (is_loaded("foo")) {
   unloadNamespace("foo")
 }

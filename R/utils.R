@@ -16,27 +16,25 @@ collapse_quote_transformer <- function(code, envir) {
   res
 }
 
-#' @importFrom rlang error_cnd
-#' @importFrom glue glue
-abort <- function(msg, type = NULL, ..., .envir = parent.frame()) {
-  stop(
-    error_cnd(
-      .subclass = type, ...,
-      message = glue(msg,
-        .envir = parent.frame(),
-        .transformer = collapse_quote_transformer),
-      ))
+new_error_msg <- function(msg, envir) {
+  glue(msg, .envir = envir, .transformer = collapse_quote_transformer)
 }
 
-#' @importFrom rlang warning_cnd
-warn <- function(msg, type = NULL, ..., .envir = parent.frame()) {
-  warning(
-    warning_cnd(
-      .subclass = type, ...,
-      message = glue(msg,
-        .envir = parent.frame(),
-        .transformer = collapse_quote_transformer),
-      ))
+new_error <- function(msg, ...) {
+  err$new_error(new_error_msg(msg, parent.frame()), ...)
+}
+
+new_filesystem_error <- function(msg, package, ...) {
+  e <- err$new_error(new_error_msg(msg, parent.frame()),
+                     package = package, ...)
+  class(e) <- c("filesystem_error", class(e))
+  e
+}
+
+new_invalid_input_error <- function(msg, ...) {
+  e <- err$new_error(new_error_msg(msg, parent.frame()))
+  class(e) <- c("invalid_input_error", class(e))
+  e
 }
 
 is_loaded <- function(package) {

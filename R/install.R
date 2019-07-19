@@ -175,7 +175,7 @@ select_next_task <- function(state) {
 
   ## Detect internal error
   if (!all(state$plan$install_done) && all(is.na(state$plan$worker_id))) {
-    stop("Internal error, no task running and cannot select new task")
+    throw(new_error("Internal error, no task running and cannot select new task"))
   }
 
   ## Looks like nothing else to do
@@ -197,7 +197,7 @@ start_task <- function(state, task) {
     start_task_install(state, task)
 
   } else {
-    stop("Unknown task, internal error")
+    throw(new_error("Unknown task, internal error"))
   }
 }
 
@@ -280,7 +280,7 @@ stop_task <- function(state, worker) {
     stop_task_install(state, worker)
 
   } else {
-    stop("Unknown task, internal error")
+    throw(new_error("Unknown task, internal error"))
   }
 }
 
@@ -316,7 +316,7 @@ stop_task_build <- function(state, worker) {
   state$plan$worker_id[[pkgidx]] <- NA_character_
 
   if (!success) {
-    abort("Failed to build source package {pkg}.")
+    throw(new_error("Failed to build source package {pkg}."))
   }
 
   state
@@ -378,7 +378,7 @@ stop_task_install <- function(state, worker) {
   state$plan$worker_id[[pkgidx]] <- NA_character_
 
   if (!success) {
-    abort("Failed to install binary package {pkg}.")
+    throw(new_error("Failed to install binary package {pkg}."))
   }
 
   ## Need to remove from the dependency list

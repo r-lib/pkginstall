@@ -40,7 +40,7 @@ install_binary <- function(filename, lib = .libPaths()[[1L]],
 
   if (!quiet) bar$terminate()
   if (px$get_exit_status() != 0) {
-    stop("Package installation failed\n", stderr)
+    throw(new_error("Package installation failed\n", stderr))
   }
 
   cli_alert_success(paste0("Installed ", filename))
@@ -75,15 +75,14 @@ install_extracted_binary <- function(filename, lib_cache, pkg_cache, lib,
     dir.create(dirname(move_to), showWarnings = FALSE, recursive = TRUE)
     ret <- file.rename(installed_path, move_to)
     if (!ret) {
-      abort(type = "filesystem",
+      throw(new_filesystem_error(
         "Failed to move installed package at {installed_path}",
-        package = pkg_name)
+        package = pkg_name))
     }
     ret <- unlink(move_to, recursive = TRUE, force = TRUE)
     if (ret != 0) {
-      warn(type = "filesystem",
-        "Failed to remove installed package at {move_to}",
-        package = pkg_name)
+      warn("Failed to remove installed package at {move_to}",
+           package = pkg_name)
     }
   }
   ret <- file.rename(pkg$path, installed_path)
@@ -125,6 +124,6 @@ add_metadata <- function(pkg_path, metadata) {
   }
 
   if (!file.exists(source_desc) && !file.exists(binary_desc)) {
-    stop("No DESCRIPTION found!", call. = FALSE)
+    throw(new_error("No DESCRIPTION found!", call. = FALSE))
   }
 }

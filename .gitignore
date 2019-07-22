@@ -3,3 +3,4 @@
 .RData
 *.tgz
 script.R
+/r-packages

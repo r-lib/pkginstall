@@ -141,7 +141,8 @@ test_that("handle event, build process finished, but failed", {
       state <- handle_events(state, events)
       if (all(state$plan$build_done)) break;
     },
-    "Failed to install"
+    "Failed to install",
+    class = "error"
   )
 
 })
@@ -198,7 +199,7 @@ test_that("handle event, install process finished, but failed", {
       if (done) break
       if (!proc$is_alive()) done <- TRUE
     }
-  }, "Failed to install")
+  }, "Failed to install", class = "error")
 })
 
 test_that("select_next_task", {

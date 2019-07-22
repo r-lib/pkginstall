@@ -398,7 +398,8 @@ stop_task_package_uncompress <- function(state, worker) {
     state$plan$package_stderr[[pkgidx]] <- worker$stderr
     state$plan$worker_id[[pkgidx]] <- NA_character_
 
-    abort("Failed to package {pkg} from source tree.")
+    throw(new_error(
+      "Failed to uncompress {pkg} from {state$plan$file[[pkgidx]]}."))
   }
 
   start_task_package_build(state, worker$task)
@@ -432,7 +433,8 @@ stop_task_package_build <- function(state, worker) {
   state$plan$worker_id[[pkgidx]] <- NA_character_
 
   if (!success) {
-    abort("Failed to package {pkg} from source tree.")
+    throw(new_error(c("Failed to package {pkg} from source tree ",
+                      "{state$plan$file[[pkgidx]]}.")))
   }
 
   state
@@ -470,7 +472,7 @@ stop_task_build <- function(state, worker) {
   state$plan$worker_id[[pkgidx]] <- NA_character_
 
   if (!success) {
-    abort("Failed to build source package {pkg}.")
+    throw(new_error("Failed to build source package {pkg}."))
   }
 
   state
@@ -532,7 +534,7 @@ stop_task_install <- function(state, worker) {
   state$plan$worker_id[[pkgidx]] <- NA_character_
 
   if (!success) {
-    abort("Failed to install binary package {pkg}.")
+    throw(new_error("Failed to install binary package {pkg}."))
   }
 
   ## Need to remove from the dependency list

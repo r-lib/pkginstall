@@ -227,8 +227,8 @@ make_uncompress_process <- function(archive, exdir = ".", ...) {
   type <- detect_package_archive_type(archive)
 
   if (type == "unknown") {
-    abort(type = "invalid_input",
-          "Cannot extract {archive}, unknown archive type?")
+    throw(new_input_error(
+      "Cannot extract {archive}, unknown archive type?"))
   }
 
   if (type == "zip") {

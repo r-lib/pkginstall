@@ -75,22 +75,22 @@ install_extracted_binary <- function(filename, lib_cache, pkg_cache, lib,
     dir.create(dirname(move_to), showWarnings = FALSE, recursive = TRUE)
     ret <- file.rename(installed_path, move_to)
     if (!ret) {
-      abort(type = "filesystem",
+      throw(new_fs_error(
         "Failed to move installed package at {installed_path}",
-        package = pkg_name)
+        package = pkg_name))
     }
     ret <- unlink(move_to, recursive = TRUE, force = TRUE)
     if (ret != 0) {
-      warn(type = "filesystem",
+      throw(new_fs_warning(
         "Failed to remove installed package at {move_to}",
-        package = pkg_name)
+        package = pkg_name))
     }
   }
   ret <- file.rename(pkg$path, installed_path)
   if (!ret) {
-    abort(type = "filesystem",
+    throw(new_fs_error(
       "Unable to move package from {pkg$path} to {installed_path}",
-      package = pkg_name)
+      package = pkg_name))
   }
 
   cnd_signal(

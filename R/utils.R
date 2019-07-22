@@ -16,27 +16,38 @@ collapse_quote_transformer <- function(code, envir) {
   res
 }
 
-#' @importFrom rlang error_cnd
 #' @importFrom glue glue
-abort <- function(msg, type = NULL, ..., .envir = parent.frame()) {
-  stop(
-    error_cnd(
-      .subclass = type, ...,
-      message = glue(msg,
-        .envir = parent.frame(),
-        .transformer = collapse_quote_transformer),
-      ))
+
+new_cnd_msg <- function(msg, .envir) {
+  msg <- paste(msg, collapse = "")
+  glue(msg, .envir = .envir, .transformer = collapse_quote_transformer)
 }
 
-#' @importFrom rlang warning_cnd
-warn <- function(msg, type = NULL, ..., .envir = parent.frame()) {
-  warning(
-    warning_cnd(
-      .subclass = type, ...,
-      message = glue(msg,
-        .envir = parent.frame(),
-        .transformer = collapse_quote_transformer),
-      ))
+new_error <- function(msg, package = NULL) {
+  cnd <- err$new_error(new_cnd_msg(msg, .envir = parent.frame()))
+  cnd$package <- package
+  cnd
+}
+
+new_fs_error <- function(msg, package = NULL) {
+  cnd <- err$new_error(new_cnd_msg(msg, .envir = parent.frame()))
+  cnd$package <- package
+  class(cnd) <- c("install_filesystem_error", class(cnd))
+  cnd
+}
+
+new_input_error <- function(msg, package = NULL) {
+  cnd <- err$new_error(new_cnd_msg(msg, .envir = parent.frame()))
+  cnd$package <- package
+  class(cnd) <- c("install_input_error", class(cnd))
+  cnd
+}
+
+new_fs_warning <- function(msg, package = NULL) {
+  cnd <- err$new_cnd(new_cnd_msg(msg, .envir = parent.frame()))
+  cnd$package <- package
+  class(cnd) <- c("install_filesystem_warning", "warning", class(cnd))
+  cnd
 }
 
 is_loaded <- function(package) {

@@ -24,6 +24,8 @@ install_package_plan <- function(plan, lib = .libPaths()[[1]],
     is_count(num_workers, min = 1L)
   )
 
+  if (! "packaged" %in% colnames(plan)) plan$packaged <- TRUE
+
   config <- list(lib = lib, num_workers = num_workers)
   state <- make_start_state(plan, config)
   state$progress <- create_progress_bar(state)
@@ -56,6 +58,11 @@ make_start_state <- function(plan, config) {
   ## We store the data about build and installation here
   install_cols <- data.frame(
     stringsAsFactors = FALSE,
+    package_done = plan$packaged,
+    package_time = I(rep_list(nrow(plan), as.POSIXct(NA))),
+    package_error = I(rep_list(nrow(plan), list())),
+    package_stdout = I(rep_list(nrow(plan), character())),
+    package_stderr = I(rep_list(nrow(plan), character())),
     build_done = (plan$type %in% c("deps", "installed")) | plan$binary,
     build_time = I(rep_list(nrow(plan), as.POSIXct(NA))),
     build_error = I(rep_list(nrow(plan), list())),
@@ -149,6 +156,17 @@ select_next_task <- function(state) {
     return(task("idle"))
   }
 
+  ## Can we select a package tree to build into a source package? Do that.
+  can_package <- which(
+    ! state$plan$package_done &
+    map_int(state$plan$deps_left, length) == 0 &
+    is.na(state$plan$worker_id))
+
+  if (any(can_package)) {
+    pkgidx <- can_package[1]
+    return(task("package", pkgidx = pkgidx, phase = "uncompress"))
+  }
+
   ## Can we select a source package build? Do that.
   can_build <- which(
     ! state$plan$build_done &
@@ -190,6 +208,9 @@ start_task <- function(state, task) {
   if (task$name == "idle") {
     state
 
+  } else if (task$name == "package") {
+    start_task_package(state, task)
+
   } else if (task$name == "build") {
     start_task_build(state, task)
 
@@ -210,16 +231,46 @@ get_worker_id <- (function() {
 })()
 
 make_build_process <- function(path, tmp_dir, lib, vignettes,
-                               needscompilation) {
+                               needscompilation, binary) {
 
   ## with_libpath() is needed for newer callr, which forces the current
   ## lib path in the child process.
   withr::with_libpaths(lib, action = "prefix",
     pkgbuild_process$new(
-      path, tmp_dir, binary = TRUE, vignettes = vignettes,
+      path, tmp_dir, binary = binary, vignettes = vignettes,
       needs_compilation = needscompilation, compile_attributes = FALSE,
-      args = glue("--library={lib}"))
+      args = if (binary) glue("--library={lib}"))
     )
+}
+
+start_task_package <- function(state, task) {
+  pkgidx <- task$args$pkgidx
+  pkg <- state$plan$package[pkgidx]
+  version <- state$plan$version[pkgidx]
+
+  path <- if (state$plan$type[pkgidx] == "local") {
+      sub("^file://", "", state$plan$sources[[pkgidx]])
+    } else {
+      state$plan$file[pkgidx]
+    }
+
+  needscompilation <- !identical(state$plan$needscompilation[pkgidx], "no")
+  dir.create(tree_dir <- file.path(create_temp_dir(), pkg))
+  lib <- state$config$lib
+
+  alert("info", "Packaging {pkg {pkg}} {version {version}}")
+
+  task$args$phase <- "uncompress"
+  task$args$tree_dir <- tree_dir
+  px <- make_uncompress_process(path, tree_dir)
+  worker <- list(id = get_worker_id(), task = task, process = px,
+                 stdout = character(), stderr = character())
+  state$workers <- c(
+    state$workers, structure(list(worker), names = worker$id))
+  state$plan$worker_id[pkgidx] <- worker$id
+  state$plan$package_time[[pkgidx]] <- Sys.time()
+  state$plan_uncompressed[[pkgidx]] <- tree_dir
+  state
 }
 
 #' @importFrom pkgbuild pkgbuild_process
@@ -240,7 +291,8 @@ start_task_build <- function(state, task) {
   version <- state$plan$version[pkgidx]
   alert("info", "Building {pkg {pkg}} {version {version}}")
 
-  px <- make_build_process(path, tmp_dir, lib, vignettes, needscompilation)
+  px <- make_build_process(path, tmp_dir, lib, vignettes, needscompilation,
+                           binary = TRUE)
   worker <- list(id = get_worker_id(), task = task, process = px,
                  stdout = character(), stderr = character())
   state$workers <- c(
@@ -273,7 +325,10 @@ start_task_install <- function(state, task) {
 }
 
 stop_task <- function(state, worker) {
-  if (worker$task$name == "build") {
+  if (worker$task$name == "package") {
+    stop_task_package(state, worker)
+
+  } else if (worker$task$name == "build") {
     stop_task_build(state, worker)
 
   } else if (worker$task$name == "install") {
@@ -282,6 +337,96 @@ stop_task <- function(state, worker) {
   } else {
     stop("Unknown task, internal error")
   }
+}
+
+stop_task_package <- function(state, worker) {
+  if (worker$task$args$phase == "uncompress") {
+    stop_task_package_uncompress(state, worker)
+  } else {
+    stop_task_package_build(state, worker)
+  }
+}
+
+stop_task_package_uncompress <- function(state, worker) {
+  pkgidx <- worker$task$args$pkgidx
+  success <- worker$process$get_exit_status() == 0
+
+  if (!success) {
+    pkg <- state$plan$package[pkgidx]
+    version <- state$plan$version[pkgidx]
+    time <- Sys.time() - state$plan$package_time[[pkgidx]]
+    ptime <- pretty_sec(as.numeric(time, units = "secs"))
+    alert("danger", "Failed to package {pkg {pkg}} \\
+           {version {version}} {timestamp {ptime}}")
+    update_progress_bar(state, 1L)
+
+    state$plan$package_done[[pkgidx]] <- TRUE
+    state$plan$package_time[[pkgidx]] <- time
+    state$plan$package_error[[pkgidx]] <- ! success
+    state$plan$package_stdout[[pkgidx]] <- worker$stdout
+    state$plan$package_stderr[[pkgidx]] <- worker$stderr
+    state$plan$worker_id[[pkgidx]] <- NA_character_
+
+    abort("Failed to package {pkg} from source tree.")
+  }
+
+  ## The actual package might be in a subdirectory, e.g. when the
+  ## tree was downloaded from GitHub
+  tree_dir <- worker$task$args$tree_dir
+  dir_tree_dir <- dir(tree_dir)
+  if (! "DESCRIPTION" %in% dir_tree_dir && length(dir_tree_dir) == 1 &&
+      "DESCRIPTION" %in% dir(file.path(tree_dir, dir_tree_dir))) {
+    tree_dir <- file.path(tree_dir, dir_tree_dir)
+  }
+
+  vignettes <- state$plan$vignettes[pkgidx]
+  needscompilation <- !identical(state$plan$needscompilation[pkgidx], "no")
+  lib <- state$config$lib
+
+  worker$task$args$phase <- "build"
+  px <- make_build_process(tree_dir, dirname(tree_dir), lib, vignettes,
+                           needscompilation, binary = FALSE)
+  worker <- list(id = get_worker_id(), task = worker$task, process = px,
+                 stdout = character(), stderr = character())
+  state$workers <- c(
+    state$workers, structure(list(worker), names = worker$id))
+  state$plan$worker_id[pkgidx] <- worker$id
+  state$plan$build_time[[pkgidx]] <- Sys.time()
+  state
+}
+
+stop_task_package_build <- function(state, worker) {
+  pkgidx <- worker$task$args$pkgidx
+  success <- worker$process$get_exit_status() == 0
+
+  pkg <- state$plan$package[pkgidx]
+  version <- state$plan$version[pkgidx]
+  time <- Sys.time() - state$plan$package_time[[pkgidx]]
+  ptime <- pretty_sec(as.numeric(time, units = "secs"))
+
+  if (success) {
+    alert("success", "Packaged {pkg {pkg}} {version {version}} \\
+           {timestamp {ptime}}")
+    ## Need to save the name of the built package
+    state$plan$file[pkgidx] <- worker$process$get_built_file()
+  } else {
+    alert("danger", "Failed to package {pkg {pkg}} \\
+           {version {version}} {timestamp {ptime}}")
+  }
+  update_progress_bar(state, 1L)
+
+  state$plan$package_done[[pkgidx]] <- TRUE
+  state$plan$package_time[[pkgidx]] <- time
+  state$plan$package_error[[pkgidx]] <- ! success
+  state$plan$package_stdout[[pkgidx]] <- worker$stdout
+  state$plan$package_stderr[[pkgidx]] <- worker$stderr
+  state$plan$worker_id[[pkgidx]] <- NA_character_
+
+  if (!success) {
+    abort("Failed to package {pkg} from source tree.")
+  }
+
+  state
 }
 
 #' @importFrom prettyunits pretty_sec

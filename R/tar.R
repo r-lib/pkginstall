@@ -222,3 +222,18 @@ runtar_init <- function(self, private, super, tarfile, files, exdir,
   process_options$args <- list(options = options)
   super$initialize(process_options)
 }
+
+make_uncompress_process <- function(archive, exdir = ".", ...) {
+  type <- detect_package_archive_type(archive)
+
+  if (type == "unknown") {
+    abort(type = "invalid_input",
+          "Cannot extract {archive}, unknown archive type?")
+  }
+
+  if (type == "zip") {
+    make_unzip_process(archive, exdir = exdir)
+  } else {
+    make_untar_process(archive, exdir = exdir)
+  }
+}

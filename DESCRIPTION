@@ -1,6 +1,6 @@
 Package: pkginstall
 Title: Installs Packages from Local Files
-Version: 0.0.0.9001
+Version: 0.0.0.9002
 Authors@R:
     c(person("Jim", "Hester", email = "james.f.hester@gmail.com",
              role = c("aut", "cre")),

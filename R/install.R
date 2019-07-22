@@ -245,31 +245,66 @@ make_build_process <- function(path, tmp_dir, lib, vignettes,
 
 start_task_package <- function(state, task) {
   pkgidx <- task$args$pkgidx
+  path <- state$plan$file[pkgidx]
   pkg <- state$plan$package[pkgidx]
   version <- state$plan$version[pkgidx]
 
-  path <- if (state$plan$type[pkgidx] == "local") {
-      sub("^file://", "", state$plan$sources[[pkgidx]])
-    } else {
-      state$plan$file[pkgidx]
-    }
-
-  needscompilation <- !identical(state$plan$needscompilation[pkgidx], "no")
-  dir.create(tree_dir <- file.path(create_temp_dir(), pkg))
-  lib <- state$config$lib
-
+  state$plan$package_time[[pkgidx]] <- Sys.time()
   alert("info", "Packaging {pkg {pkg}} {version {version}}")
 
+  if (file.info(path)$isdir) {
+    ## Just build tree_dir
+    task$args$tree_dir <- path
+    start_task_package_build(state, task)
+  } else {
+    ## Uncompress to tree_dir, then build it
+    task$args$tree_dir <- paste0(path, "-tree")
+    start_task_package_uncompress(state, task)
+  }
+}
+
+start_task_package_uncompress <- function(state, task) {
+  pkgidx <- task$args$pkgidx
+  path <- state$plan$file[pkgidx]
+
+  needscompilation <- !identical(state$plan$needscompilation[pkgidx], "no")
+  lib <- state$config$lib
+
   task$args$phase <- "uncompress"
-  task$args$tree_dir <- tree_dir
-  px <- make_uncompress_process(path, tree_dir)
+  px <- make_uncompress_process(path, task$args$tree_dir)
   worker <- list(id = get_worker_id(), task = task, process = px,
                  stdout = character(), stderr = character())
   state$workers <- c(
     state$workers, structure(list(worker), names = worker$id))
   state$plan$worker_id[pkgidx] <- worker$id
-  state$plan$package_time[[pkgidx]] <- Sys.time()
-  state$plan_uncompressed[[pkgidx]] <- tree_dir
+  state
+}
+
+start_task_package_build <- function(state, task) {
+  pkgidx <- task$args$pkgidx
+
+  ## The actual package might be in a subdirectory, e.g. when the
+  ## tree was downloaded from GitHub
+  tree_dir <- task$args$tree_dir
+  dir_tree_dir <- dir(tree_dir)
+  if (! "DESCRIPTION" %in% dir_tree_dir && length(dir_tree_dir) == 1 &&
+      "DESCRIPTION" %in% dir(file.path(tree_dir, dir_tree_dir))) {
+    tree_dir <- file.path(tree_dir, dir_tree_dir)
+  }
+
+  vignettes <- state$plan$vignettes[pkgidx]
+  needscompilation <- !identical(state$plan$needscompilation[pkgidx], "no")
+  lib <- state$config$lib
+
+  task$args$phase <- "build"
+  px <- make_build_process(tree_dir, dirname(tree_dir), lib, vignettes,
+                           needscompilation, binary = FALSE)
+  worker <- list(id = get_worker_id(), task = task, process = px,
+                 stdout = character(), stderr = character())
+  state$workers <- c(
+    state$workers, structure(list(worker), names = worker$id))
+  state$plan$worker_id[pkgidx] <- worker$id
+  state$plan$build_time[[pkgidx]] <- Sys.time()
   state
 }
 
@@ -277,11 +312,7 @@ start_task_package <- function(state, task) {
 
 start_task_build <- function(state, task) {
   pkgidx <- task$args$pkgidx
-  path <- if (state$plan$type[pkgidx] == "local") {
-      sub("^file://", "", state$plan$sources[[pkgidx]])
-    } else {
-      state$plan$file[pkgidx]
-    }
+  path <- state$plan$file[pkgidx]
   vignettes <- state$plan$vignettes[pkgidx]
   needscompilation <- !identical(state$plan$needscompilation[pkgidx], "no")
   tmp_dir <- create_temp_dir()
@@ -370,29 +401,7 @@ stop_task_package_uncompress <- function(state, worker) {
     abort("Failed to package {pkg} from source tree.")
   }
 
-  ## The actual package might be in a subdirectory, e.g. when the
-  ## tree was downloaded from GitHub
-  tree_dir <- worker$task$args$tree_dir
-  dir_tree_dir <- dir(tree_dir)
-  if (! "DESCRIPTION" %in% dir_tree_dir && length(dir_tree_dir) == 1 &&
-      "DESCRIPTION" %in% dir(file.path(tree_dir, dir_tree_dir))) {
-    tree_dir <- file.path(tree_dir, dir_tree_dir)
-  }
-
-  vignettes <- state$plan$vignettes[pkgidx]
-  needscompilation <- !identical(state$plan$needscompilation[pkgidx], "no")
-  lib <- state$config$lib
-
-  worker$task$args$phase <- "build"
-  px <- make_build_process(tree_dir, dirname(tree_dir), lib, vignettes,
-                           needscompilation, binary = FALSE)
-  worker <- list(id = get_worker_id(), task = worker$task, process = px,
-                 stdout = character(), stderr = character())
-  state$workers <- c(
-    state$workers, structure(list(worker), names = worker$id))
-  state$plan$worker_id[pkgidx] <- worker$id
-  state$plan$build_time[[pkgidx]] <- Sys.time()
-  state
+  start_task_package_build(state, worker$task)
 }
 
 stop_task_package_build <- function(state, worker) {

@@ -2,6 +2,7 @@
 [![Travis build status](https://travis-ci.org/r-lib/pkginstall.svg?branch=master)](https://travis-ci.org/r-lib/pkginstall)
 [![Coverage status](https://codecov.io/gh/r-lib/pkginstall/branch/master/graph/badge.svg)](https://codecov.io/github/r-lib/pkginstall?branch=master)
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/r-lib/pkginstall?branch=master&svg=true)](https://ci.appveyor.com/project/r-lib/pkginstall)
+[![Lifecycle: superseded](https://img.shields.io/badge/lifecycle-superseded-orange.svg)](https://www.tidyverse.org/lifecycle/#superseded)
 
 
 <p align="center">
@@ -36,3 +37,7 @@ install.packages("pkginstall")
 files <- download.packages("remotes", type = "binary", ".")
 pkginstall::install_binary(files[[2]])
 ```
+
+## Status [![Lifecycle: superseded](https://img.shields.io/badge/lifecycle-superseded-orange.svg)](https://www.tidyverse.org/lifecycle/#superseded)
+
+pkginstall is superseded: the functionality was included directly in the pkgdepends package, used by pak. We recommend using [pak](https://github.com/r-lib/pak) instead.
